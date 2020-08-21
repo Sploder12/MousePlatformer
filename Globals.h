@@ -9,7 +9,7 @@ public:
 	static bool g_debug;
 
 	static std::vector<screenObject*> g_ScreenObjects;
-	static screenObject* g_level;
+	static level* g_level;
 	static player* g_player;
 
 	static long g_mouseX;

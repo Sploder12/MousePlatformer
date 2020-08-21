@@ -282,10 +282,27 @@ struct player : screenObject
 
 	HANDLE sprite;
 
+	std::map<WPARAM, bool> movementKeys = { {0x41, false}, {0x44, false}, {0x53, false}, {0x57, false}, {VK_SPACE, false} }; //A D S W SPACE
+
+	float xvel = 0;
+	float yvel = 0;
+
+	const float maxXVel = 5;
+	const float maxYVel = 5;
+
+	bool grounded = true;
+
 	unsigned int lvl = 1;
 
-	player(RECT xy, HANDLE sprite, std::string name = "", unsigned int lvl = 1) :
-		screenObject(xy, RGB(255,255,255), name), sprite(sprite), lvl(lvl) {}
+	player(RECT xy, HANDLE sprite, std::string loadDat = "", unsigned int lvl = 1) :
+		screenObject(xy, RGB(255,255,255), ""), sprite(sprite), lvl(lvl) 
+	{
+		if (loadDat != "") loadPlayer(loadDat);
+	}
+
+	void loadPlayer(std::string data)
+	{
+	}
 
 	void moveX(int x)
 	{
@@ -309,6 +326,63 @@ struct player : screenObject
 	{
 		this->rect.top = y;
 		this->rect.bottom = y + 64;
+	}
+
+	bool touching(float x, float x2, float wid=64)
+	{
+		return x > x2 && x < x2 + wid;
+	}
+
+	bool collideX(stage* stage)
+	{
+		float expectedX = this->rect.left + this->xvel;
+		unsigned int tileID = 0;
+		for (unsigned int i = 0; i < 108; i++)
+		{
+			tile* curTile = stage->data.at(i);
+			tileID = (curTile->tx) + (curTile->ty*11);
+			float tileX = (float)(i%12 * 64);
+			float tileY = (float)(floor(i / 12) * 64);
+			switch(tileID)
+			{
+			case 13:
+				if (touching(expectedX, tileX) || touching(expectedX+64, tileX))
+				{
+					if (touching(this->rect.top, tileY) || touching(this->rect.top + 64, tileY))
+					{
+						return true;
+					}
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		return false;
+	}
+
+	bool collideY(stage* stage)
+	{
+
+	}
+
+	void movePlayer(stage* stage)
+	{
+
+		if (this->movementKeys.at(0x41) && !this->movementKeys.at(0x44))
+		{
+			if(this->xvel > -this->maxXVel)
+				this->xvel -= 1;
+		}
+		else if (this->movementKeys.at(0x44) && !this->movementKeys.at(0x41))
+		{
+			if (this->xvel < this->maxXVel)
+				this->xvel += 1;
+		}
+
+		if (collideX(stage))
+			this->xvel = 0;
+		else moveX(this->xvel);
 	}
 
 

@@ -3,7 +3,7 @@
 bool globals::g_debug = true;
 
 std::vector<screenObject*> globals::g_ScreenObjects;
-screenObject* globals::g_level;
+level* globals::g_level;
 player* globals::g_player;
 
 long globals::g_mouseY = 0;

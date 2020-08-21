@@ -158,13 +158,33 @@ void pressed(WPARAM key)
             globals::g_debug = !globals::g_debug;
             debugtxt->text = "Debug: " + std::to_string(globals::g_debug);
         }
+        else
+        {
+            globals::g_player->movementKeys.at(0x44) = true;
+        }
             
+        break;
+    case VK_SPACE:
+    case 0x41:
+    case 0x53:
+    case 0x57:
+        globals::g_player->movementKeys.at(key) = true;
         break;
     }
 }
 
 void depressed(WPARAM key)
 {
+    switch (key)
+    {
+    case VK_SPACE:
+    case 0x41:
+    case 0x44:
+    case 0x53:
+    case 0x57:
+        globals::g_player->movementKeys.at(key) = false;
+        break;
+    }
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -259,6 +279,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             globals::g_fps = 1000/(float)(globals::timeNow - lasttime);
             fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
             timetxt->text = "Time Now: " + std::to_string(globals::timeNow);
+            globals::g_player->movePlayer(globals::g_level->foreground);
             InvalidateRect(hWnd, &createRECT(0, 0, 10000, 10000), true);
             break;
         }
