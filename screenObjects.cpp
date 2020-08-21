@@ -37,7 +37,6 @@ struct screenObject
 	virtual void show() = 0;
 
 	virtual COLORREF draw(HDC * hdc, long mousX = 0, long mouseY = 0, bool mouseDown = false) = 0;
-
 };
 
 struct Button: public screenObject
@@ -90,7 +89,6 @@ struct Button: public screenObject
 				brush = CreateSolidBrush(this->color);
 				FillRect(*hdc, &this->rect, brush);
 			}
-
 		}
 		else
 		{
@@ -154,7 +152,6 @@ struct TextBox : public screenObject
 				brush = CreateSolidBrush(this->color);
 				FillRect(*hdc, &this->rect, brush);
 			}
-
 		}
 		else
 		{
@@ -165,7 +162,6 @@ struct TextBox : public screenObject
 		DeleteObject(brush);
 		return tempcolor;
 	}
-
 };
 
 struct Text: public screenObject 
@@ -365,7 +361,6 @@ struct tileSet
 		SelectObject(hdcMem, hbmOld);
 		DeleteDC(hdcMem);
 		DeleteObject(hbmOld);
-		
 	}
 };
 
@@ -422,7 +417,6 @@ struct stage
 			this->data.emplace_back(new tile(tileSets->at(tilesetID-1), tileID%11, (unsigned int)floor(tileID/11)));
 		}
 		exists = true;
-
 	}
 
 	void draw(HDC* hdc)
@@ -573,7 +567,6 @@ struct level : public screenObject
 					this->foreground = fGrnd;
 					this->background = bGrnd;
 				}
-				
 			}
 			lvlDat.close();
 			return true;

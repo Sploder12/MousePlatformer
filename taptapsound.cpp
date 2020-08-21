@@ -161,12 +161,10 @@ void pressed(WPARAM key)
             
         break;
     }
-    
 }
 
 void depressed(WPARAM key)
 {
-
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
