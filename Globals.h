@@ -11,6 +11,7 @@ public:
 	static std::vector<screenObject*> g_ScreenObjects;
 	static level* g_level;
 	static player* g_player;
+	static Image* g_mousebox;
 
 	static long g_mouseX;
 	static long g_mouseY;

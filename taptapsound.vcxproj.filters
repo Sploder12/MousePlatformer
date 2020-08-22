@@ -75,6 +75,12 @@
     <Image Include="player.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="brickA.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="brickB.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Text Include="level1.txt">

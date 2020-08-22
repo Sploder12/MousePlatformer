@@ -275,10 +275,114 @@ struct Image : public screenObject
 	}
 };
 
+struct tileSet
+{
+	HANDLE source;
+	unsigned int tw;
+	unsigned int th;
+
+	tileSet(HANDLE img, unsigned int tw, unsigned int th) :
+	source(img), tw(tw), th(th){}
+
+	void draw(HDC* hdc, int x, int y, unsigned int tx, unsigned int ty)
+	{
+		BITMAP bm;
+		HDC hdcMem = CreateCompatibleDC(*hdc);
+		HGDIOBJ hbmOld = SelectObject(hdcMem, source);
+		GetObject(source, sizeof(bm), &bm);
+		BitBlt(*hdc, x, y, tw, th, hdcMem, tx * tw, ty * th, SRCCOPY);
+		SelectObject(hdcMem, hbmOld);
+		DeleteDC(hdcMem);
+		DeleteObject(hbmOld);
+	}
+};
+
+struct tile
+{
+	tileSet* tiles;
+	unsigned int tx;
+	unsigned int ty;
+	bool solid;
+	float friction = 0.0f;
+	bool killer = false;
+
+	tile()
+	{
+		tiles = nullptr;
+		tx = 0;
+		ty = 0;
+		solid = false;
+	}
+
+	tile(tileSet* tileS, unsigned int tx, unsigned int ty, bool solid = true, float friction = 0.1f, bool killer = false) :
+		tiles(tileS), tx(tx), ty(ty), solid(solid), friction(friction), killer(killer) {}
+
+	void draw(HDC * hdc, int x, int y)
+	{
+		tiles->draw(hdc, x, y, this->tx, this->ty);
+	}
+};
+
+struct stage
+{
+	std::vector<tile*> data; //12:9 of 64x64
+
+	bool exists = false;
+
+	stage()
+	{
+		exists = false;
+	}
+
+	stage(std::string data, std::vector<tileSet*>* tileSets, unsigned int tilesetID)
+	{
+		loadStage(data, tileSets, tilesetID);
+	}
+
+	void loadStage(std::string data, std::vector<tileSet*>* tileSets, unsigned int tilesetID)
+	{
+		std::string temp = "";
+		this->data.reserve(108);
+		for (unsigned int i = 0; i < 108; i++)
+		{
+			temp = "";
+			temp += data.at(i * 2);
+			temp += data.at((i * 2) + 1);
+			unsigned int tileID = std::stoi(temp);
+			bool solid = (tileID > 10);
+			float friction = (tileID > 32 && tileID < 44) ? 0.02f : 0.3f; //for slippery blocks
+			bool killer = (tileID > 21 && tileID < 33) ? true : false;
+			this->data.emplace_back(new tile(tileSets->at(tilesetID-1), tileID%11, (unsigned int)floor(tileID/11), solid, friction, killer));
+		}
+		exists = true;
+	}
+
+	void draw(HDC* hdc)
+	{
+		if (exists)
+		{
+			for (unsigned int i = 0; i < data.size(); i++)
+			{
+				data.at(i)->draw(hdc, (i % 12) * 64, (int)floor(i / 12) * 64);
+			}
+		}
+	}
+
+	~stage()
+	{
+		size_t size = data.size();
+		for (unsigned int i = 0; i < size; i++)
+		{
+			delete data.at(i);
+		}
+		data.clear();
+	}
+};
+
 struct player : screenObject
 {
-	int Cx;
-	int Cy;
+	unsigned int Cx;
+	unsigned int Cy;
 
 	HANDLE sprite;
 
@@ -287,15 +391,22 @@ struct player : screenObject
 	float xvel = 0;
 	float yvel = 0;
 
-	const float maxXVel = 5;
-	const float maxYVel = 5;
+	const float maxXVel = 6;
+	const float maxYVel = 6;
 
 	bool grounded = true;
+	float curFriction = 0.0f;
 
-	unsigned int lvl = 1;
+	bool canMousebox = false;
+	bool mousebox = false;
 
-	player(RECT xy, HANDLE sprite, std::string loadDat = "", unsigned int lvl = 1) :
-		screenObject(xy, RGB(255,255,255), ""), sprite(sprite), lvl(lvl) 
+	unsigned int lvlStartX = 1;
+	unsigned int lvlStartY = 1;
+	unsigned int lvlStartCX = 1;
+	unsigned int lvlStartCY = 1;
+
+	player(RECT xy, HANDLE sprite, std::string loadDat = "") :
+		screenObject(xy, RGB(255, 255, 255), ""), sprite(sprite)
 	{
 		if (loadDat != "") loadPlayer(loadDat);
 	}
@@ -304,58 +415,110 @@ struct player : screenObject
 	{
 	}
 
-	void moveX(int x)
+	void moveX(float x)
 	{
-		this->rect.left += x;
-		this->rect.right += x + 64;
+		this->rect.left += long(x);
+		this->rect.right += long(x + 64);
 	}
 
-	void moveY(int y)
+	void moveY(float y)
 	{
-		this->rect.top += y;
-		this->rect.bottom += y + 64;
+		this->rect.top += long(y);
+		this->rect.bottom += long(y + 64);
 	}
 
-	void setX(int x)
+	void setX(float x)
 	{
-		this->rect.left = x;
-		this->rect.right = x + 64;
+		this->rect.left = long(x);
+		this->rect.right = long(x + 64);
 	}
 
-	void setY(int y)
+	void setY(float y)
 	{
-		this->rect.top = y;
-		this->rect.bottom = y + 64;
+		this->rect.top = long(y);
+		this->rect.bottom = long(y + 64);
 	}
 
-	bool touching(float x, float x2, float wid=64)
+	void kill()
 	{
-		return x > x2 && x < x2 + wid;
+		setX(float(this->lvlStartX));
+		setY(float(this->lvlStartY));
+		this->Cx = lvlStartCX;
+		this->Cy = lvlStartCY;
+		this->xvel = 0;
+		this->yvel = 0;
+	}
+
+	bool touching(float x, float x2, float wid = 64)
+	{
+		return((x >= x2)&&(x <= (x2 + wid)));
+	}
+
+	bool touchingE(float x, float x2, float wid = 64)
+	{
+		return x >= x2 && x < x2 + wid;
+	}
+
+	void specialCollide(tile* curTile)
+	{
+		switch (curTile->tx)
+		{
+		case 0:
+			this->canMousebox = true;
+			curTile->tx = 2;
+			curTile->ty = 0;
+			curTile->solid = false;
+			break;
+		}
 	}
 
 	bool collideX(stage* stage)
 	{
 		float expectedX = this->rect.left + this->xvel;
-		unsigned int tileID = 0;
 		for (unsigned int i = 0; i < 108; i++)
 		{
 			tile* curTile = stage->data.at(i);
-			tileID = (curTile->tx) + (curTile->ty*11);
-			float tileX = (float)(i%12 * 64);
+			float tileX = (float)(i % 12 * 64);
 			float tileY = (float)(floor(i / 12) * 64);
-			switch(tileID)
-			{
-			case 13:
-				if (touching(expectedX, tileX) || touching(expectedX+64, tileX))
+			if (curTile->solid) {
+				bool res1 = touching(expectedX, tileX);
+				bool res2 = touching(expectedX + 64, tileX);
+				if (res1 || res2)
 				{
-					if (touching(this->rect.top, tileY) || touching(this->rect.top + 64, tileY))
+					if ((this->rect.top >= tileY && this->rect.top < tileY+64) || (this->rect.top+64 > tileY && this->rect.top+64 < tileY + 64))
 					{
+						if (!curTile->killer) {
+							if (res1) this->setX(tileX + 64);
+							if (res2) this->setX(tileX - 64);
+						}
+						else this->kill();
+
+						if (curTile->ty == 4)
+						{
+							specialCollide(curTile);
+						}
+
 						return true;
 					}
 				}
-				break;
-			default:
-				break;
+			}
+		}
+		return false;
+	}
+
+	bool collideMouseX(float mx, float my, bool correct = true)
+	{
+		float expectedX = this->rect.left + this->xvel;
+		bool res1 = touching(expectedX, mx, 64);
+		bool res2 = touching(expectedX + 64, mx, 64);
+		if (res1 || res2)
+		{
+			if ((this->rect.top >= my && this->rect.top < my + 64) || (this->rect.top + 64 > my && this->rect.top + 64 < my + 64))
+			{
+				if (res1 && correct) this->setX(mx + 64);
+				if (res2 && correct) this->setX(mx - 64);
+
+				return true;
 			}
 		}
 		return false;
@@ -363,26 +526,135 @@ struct player : screenObject
 
 	bool collideY(stage* stage)
 	{
+		float expectedY = this->rect.top + this->yvel;
+		for (unsigned int i = 0; i < 108; i++)
+		{
+			tile* curTile = stage->data.at(i);
+			float tileX = (float)(i % 12 * 64);
+			float tileY = (float)(floor(i / 12) * 64);
+			if (curTile->solid) {
+				bool res1 = touching(expectedY, tileY);
+				bool res2 = touching(expectedY + 64, tileY);
+				if (res1 || res2)
+				{
+					if ((this->rect.left >= tileX && this->rect.left < tileX + 64) || (this->rect.left+64 > tileX && this->rect.left+64 < tileX+ 64))
+					{
+						if(!curTile->killer)
+						{
+							if (res1)
+							{
+								this->setY(tileY + 64);
+								this->yvel = 0;
+							}
 
+							if (res2)
+							{
+								this->setY(tileY - 64);
+								this->grounded = true;
+								this->curFriction = curTile->friction;
+								this->yvel = 0;
+							}
+
+							if (curTile->ty == 4)
+							{
+								specialCollide(curTile);
+							}
+						}
+						else this->kill();
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
-	void movePlayer(stage* stage)
+	bool collideMouseY(float mx, float my, bool correct = true)
 	{
+		float expectedY = this->rect.top + this->yvel;
+		bool res1 = touching(expectedY, my, 64);
+		bool res2 = touching(expectedY + 64, my, 64);
+		if (res1 || res2)
+		{
+			if ((this->rect.left >= mx && this->rect.left < mx + 64) || (this->rect.left + 64 > mx&& this->rect.left + 64 < mx + 64))
+			{
+				if (res1 && correct)
+				{
+					this->setY(my + 64);
+					this->yvel = 0;
+				}
 
+				if (res2 && correct)
+				{
+					this->setY(my - 64);
+					this->grounded = true;
+					this->curFriction = 0.5f;
+					this->yvel = 0;
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void movePlayer(stage* stage, float mx, float my, bool shifting)
+	{
+		this->mousebox = shifting;
 		if (this->movementKeys.at(0x41) && !this->movementKeys.at(0x44))
 		{
-			if(this->xvel > -this->maxXVel)
-				this->xvel -= 1;
+			if (this->xvel > -this->maxXVel)
+				this->xvel -= 1.2f;
 		}
 		else if (this->movementKeys.at(0x44) && !this->movementKeys.at(0x41))
 		{
 			if (this->xvel < this->maxXVel)
-				this->xvel += 1;
+				this->xvel += 1.2f;
+		}
+		else if(this->xvel != 0.0f)
+		{
+			this->xvel = (this->xvel < 0.0f) ? this->xvel + curFriction : this->xvel - curFriction;
+		}
+
+		if (this->xvel > -0.001f && this->xvel < 0.001f)
+		{
+			this->xvel = 0.0f;
 		}
 
 		if (collideX(stage))
-			this->xvel = 0;
+			this->xvel = 0.0f;
 		else moveX(this->xvel);
+
+		if (this->mousebox && this->canMousebox)
+		{
+			if (collideMouseX(mx, my))
+				this->xvel = 0.0f;
+		}
+		
+		if (this->grounded)
+		{
+			if (this->movementKeys.at(0x57) || this->movementKeys.at(VK_SPACE))
+			{
+				this->yvel -= 13.0f;
+				this->grounded = false;
+				this->curFriction = 0.075f; //friction due to air
+			}
+		}
+
+		this->yvel += 0.5f;
+		if (this->movementKeys.at(0x53))
+		{
+				this->yvel += 0.5f;
+		}
+
+		if (collideY(stage))
+			this->yvel = 0.0f;
+		else moveY(this->yvel);
+
+		if (this->mousebox && this->canMousebox)
+		{
+			if (collideMouseY(mx, my))
+				this->yvel = 0.0f;
+		}
 	}
 
 
@@ -416,105 +688,6 @@ struct player : screenObject
 	}
 };
 
-struct tileSet
-{
-	HANDLE source;
-	unsigned int tw;
-	unsigned int th;
-
-	tileSet(HANDLE img, unsigned int tw, unsigned int th) :
-	source(img), tw(tw), th(th){}
-
-	void draw(HDC* hdc, int x, int y, unsigned int tx, unsigned int ty)
-	{
-		BITMAP bm;
-		HDC hdcMem = CreateCompatibleDC(*hdc);
-		HGDIOBJ hbmOld = SelectObject(hdcMem, source);
-		GetObject(source, sizeof(bm), &bm);
-		BitBlt(*hdc, x, y, tw, th, hdcMem, tx * tw, ty * th, SRCCOPY);
-		SelectObject(hdcMem, hbmOld);
-		DeleteDC(hdcMem);
-		DeleteObject(hbmOld);
-	}
-};
-
-struct tile
-{
-	tileSet* tiles;
-	unsigned int tx;
-	unsigned int ty;
-	bool solid;
-
-	tile()
-	{
-		tiles = nullptr;
-		tx = 0;
-		ty = 0;
-		solid = false;
-	}
-
-	tile(tileSet* tileS, unsigned int tx, unsigned int ty, bool solid = true) :
-		tiles(tileS), tx(tx), ty(ty), solid(solid) {}
-
-	void draw(HDC * hdc, int x, int y)
-	{
-		tiles->draw(hdc, x, y, tx, ty);
-	}
-};
-
-struct stage
-{
-	std::vector<tile*> data; //12:9 of 64x64
-
-	bool exists = false;
-
-	stage()
-	{
-		exists = false;
-	}
-
-	stage(std::string data, std::vector<tileSet*>* tileSets, unsigned int tilesetID)
-	{
-		loadStage(data, tileSets, tilesetID);
-	}
-
-	void loadStage(std::string data, std::vector<tileSet*>* tileSets, unsigned int tilesetID)
-	{
-		std::string temp = "";
-		this->data.reserve(108);
-		for (unsigned int i = 0; i < 108; i++)
-		{
-			temp = "";
-			temp += data.at(i * 2);
-			temp += data.at((i * 2) + 1);
-			unsigned int tileID = std::stoi(temp);
-			this->data.emplace_back(new tile(tileSets->at(tilesetID-1), tileID%11, (unsigned int)floor(tileID/11)));
-		}
-		exists = true;
-	}
-
-	void draw(HDC* hdc)
-	{
-		if (exists)
-		{
-			for (unsigned int i = 0; i < data.size(); i++)
-			{
-				data.at(i)->draw(hdc, (i % 12) * 64, (int)floor(i / 12) * 64);
-			}
-		}
-	}
-
-	~stage()
-	{
-		size_t size = data.size();
-		for (unsigned int i = 0; i < size; i++)
-		{
-			delete data.at(i);
-		}
-		data.clear();
-	}
-};
-
 struct level : public screenObject
 {
 	stage* foreground = nullptr; //THESE ARE POINTERS TO ARRAYS
@@ -531,7 +704,7 @@ struct level : public screenObject
 
 	bool uninit = true;
 
-	const std::map<char, int> sIDs = { {'@',0}, {'#',1}, {'=',2}, {'|',3} };
+	const std::map<char, int> sIDs = { {'@',0}, {'#',1}, {'=',2}, {'|',3}, {'M',4}};
 	std::vector<tileSet*>* tileSets;
 	
 	level(std::string file, std::vector<tileSet*>* tileSet):
@@ -629,6 +802,19 @@ struct level : public screenObject
 					temp += dat.substr(1, 24);
 					if (dat.at(25) == ';')
 						foreground[stag].loadStage(temp, tileSets, tilesetID);
+					break;
+				case 4: //tileMods
+					unsigned int tileModindex;
+					temp = dat.substr(1, 2);
+					tileModindex = std::stoi(temp);
+					end = dat.find_first_of(')');
+					temp = dat.substr(4,end-4);
+					switch (temp.at(0))
+					{
+					case 's':
+						foreground[stag].data.at(tileModindex)->solid = (temp.at(2) == 'T');
+						break;
+					}
 					break;
 				default:
 					return false;

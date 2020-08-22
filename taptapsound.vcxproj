@@ -138,6 +138,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -164,6 +165,8 @@
     <ResourceCompile Include="taptapsound.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="brickA.bmp" />
+    <Image Include="brickB.bmp" />
     <Image Include="player.bmp" />
     <Image Include="tileset1.bmp" />
     <Image Include="brick.bmp" />

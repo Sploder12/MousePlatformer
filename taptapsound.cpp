@@ -12,6 +12,10 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 HBITMAP TSimg;
 HBITMAP playerSprite;
 
+HBITMAP mouseSpriteU;
+HBITMAP mouseSpriteA;
+HBITMAP mouseSpriteB;
+
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
@@ -87,6 +91,9 @@ Text* mouseXtxt = new Text(createRECT(0, 0, 150, 18), RGB(255, 255, 255), "NULL"
 Text* mouseYtxt = new Text(createRECT(0, 17, 150, 18), RGB(255, 255, 255), "NULL", DT_LEFT, true);
 Text* mouseDowntxt = new Text(createRECT(0, 34, 150, 18), RGB(255, 255, 255), "NULL", DT_LEFT, true);
 
+Text* playerXtxt = new Text(createRECT(100, 0, 150, 18), RGB(255, 255, 255), "NULL", DT_LEFT, true);
+Text* playerYtxt = new Text(createRECT(100, 17, 150, 18), RGB(255, 255, 255), "NULL", DT_LEFT, true);
+
 Text* timetxt = new Text(createRECT(0, 51, 250, 18), RGB(255, 255, 255), "Time Now: " + std::to_string(globals::timeNow), DT_LEFT, true);
 
 Text* modtxt1 = new Text(createRECT(0, 75, 250, 18), RGB(255, 255, 255), "Shifting: " + std::to_string(globals::g_modKeys.at(VK_SHIFT)), DT_LEFT, true);
@@ -96,6 +103,8 @@ Text* modtxt3 = new Text(createRECT(0, 109, 250, 18), RGB(255, 255, 255), "Tab: 
 Text* debugtxt = new Text(createRECT(0, 140, 250, 18), RGB(255, 255, 255), "Debug: " + std::to_string(globals::g_debug), DT_LEFT, true);
 
 Text* fpstxt = new Text(createRECT(0, 165, 250, 18), RGB(255, 255, 255), "FPS: " + std::to_string(globals::g_fps), DT_LEFT, true);
+
+Image* mousebox = new Image(createRECT(0, 0, 64, 64), mouseSpriteU);
 void buildScreenObjects()
 {
     tileset->source = TSimg;
@@ -106,14 +115,23 @@ void buildScreenObjects()
     globals::g_player = new player(createRECT(lvl->startX,lvl->startY,64,64), playerSprite);
     globals::g_player->Cx = lvl->startCX;
     globals::g_player->Cy = lvl->startCY;
-    globals::g_player->setX(lvl->startX*64);
-    globals::g_player->setY(lvl->startY*64);
+    globals::g_player->lvlStartCX = lvl->startCX;
+    globals::g_player->lvlStartCY = lvl->startCY;
+    globals::g_player->setX(float(lvl->startX*64));
+    globals::g_player->setY(float(lvl->startY*64));
+    globals::g_player->lvlStartX = lvl->startX * 64;
+    globals::g_player->lvlStartY = lvl->startY * 64;
 
-    globals::g_ScreenObjects.reserve(9);
+    globals::g_mousebox = mousebox;
+
+    globals::g_ScreenObjects.reserve(12);
 
     globals::g_ScreenObjects.push_back(mouseXtxt);
     globals::g_ScreenObjects.push_back(mouseYtxt);
     globals::g_ScreenObjects.push_back(mouseDowntxt);
+
+    globals::g_ScreenObjects.push_back(playerXtxt);
+    globals::g_ScreenObjects.push_back(playerYtxt);
 
     globals::g_ScreenObjects.push_back(timetxt);
     
@@ -124,6 +142,9 @@ void buildScreenObjects()
     globals::g_ScreenObjects.push_back(debugtxt);
 
     globals::g_ScreenObjects.push_back(fpstxt);
+
+    if (!globals::g_player->canMousebox) globals::g_mousebox->hide();
+    globals::g_ScreenObjects.push_back(globals::g_mousebox);
 }
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
@@ -140,6 +161,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    TSimg = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_TILESET1));
    playerSprite = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_PLAYER1));
+   mouseSpriteU = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICK1));
+   mouseSpriteA = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICKA));
+   mouseSpriteB = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICKB));
+   
    buildScreenObjects();
    SetTimer(hWnd, 1, globals::refreshRate, NULL);
    ShowWindow(hWnd, nCmdShow);
@@ -216,6 +241,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         globals::g_mouseY = GET_Y_LPARAM(lParam);
         mouseXtxt->text = "Mouse X: " + std::to_string(globals::g_mouseX);
         mouseYtxt->text = "Mouse Y: " + std::to_string(globals::g_mouseY);
+        if (!globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
+            if (globals::g_modKeys.at(VK_SHIFT)) globals::g_player->mousebox = true;
         break;
     case WM_LBUTTONDOWN:
         globals::g_mouseDown = true;
@@ -237,6 +264,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
         case VK_SHIFT:
             globals::g_modKeys.at(VK_SHIFT) = true;
+            if (!globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
+                globals::g_player->mousebox = true;
+            else mousebox->image = mouseSpriteB;
             break;
         case VK_CONTROL:
             globals::g_modKeys.at(VK_CONTROL) = true;
@@ -256,6 +286,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
         case VK_SHIFT:
             globals::g_modKeys.at(VK_SHIFT) = false;
+            globals::g_player->mousebox = false;
             break;
         case VK_CONTROL:
             globals::g_modKeys.at(VK_CONTROL) = false;
@@ -276,10 +307,80 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case 1:
             unsigned long long lasttime = globals::timeNow;
             globals::timeNow = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            globals::g_fps = 1000/(float)(globals::timeNow - lasttime);
+            globals::g_fps = 1000 / (float)(globals::timeNow - lasttime);
             fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
             timetxt->text = "Time Now: " + std::to_string(globals::timeNow);
-            globals::g_player->movePlayer(globals::g_level->foreground);
+            unsigned int playerCell = (globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw);
+            if (globals::g_player->canMousebox) globals::g_mousebox->show();
+            if (!globals::g_player->mousebox)
+            {
+                mousebox->rect.left = globals::g_mouseX - 32;
+                mousebox->rect.right = globals::g_mouseX + 32;
+                mousebox->rect.top = globals::g_mouseY - 32;
+                mousebox->rect.bottom = globals::g_mouseY + 32;
+                if(!globals::g_modKeys.at(VK_SHIFT))
+                    mousebox->image = mouseSpriteU;
+            }
+            else {
+                mousebox->image = mouseSpriteA;
+            }
+            globals::g_player->movePlayer(&(globals::g_level->foreground[playerCell]), float(mousebox->rect.left), float(mousebox->rect.top), globals::g_player->mousebox);
+            if (globals::g_player->rect.left >= 768)
+            {
+                if (globals::g_player->Cx < globals::g_level->lw - 1)
+                {
+                    globals::g_player->Cx += 1;
+                    globals::g_player->setX(-62);
+                }
+                else 
+                {
+                    globals::g_player->xvel = 0;
+                    globals::g_player->setX(766);
+                }
+            }
+            else if (globals::g_player->rect.left + 64 <= 0)
+            {
+                if(globals::g_player->Cx > 0)
+                {
+                    globals::g_player->Cx -= 1;
+                    globals::g_player->setX(767);
+                }
+                else
+                {
+                    globals::g_player->xvel = 0;
+                    globals::g_player->setX(-62);
+                }
+            }
+
+            if (globals::g_player->rect.top >= 576)
+            {
+                if (globals::g_player->Cy < globals::g_level->lh - 1)
+                {
+                    globals::g_player->Cy += 1;
+                    globals::g_player->setY(-62);
+                }
+                else
+                {
+                    globals::g_player->yvel = 0;
+                    globals::g_player->setY(575);
+                    globals::g_player->grounded = true;
+                }
+            }
+            else if (globals::g_player->rect.top + 64 <= 0)
+            {
+                if (globals::g_player->Cy > 0)
+                {
+                    globals::g_player->Cy -= 1;
+                    globals::g_player->setY(575);
+                }
+                else
+                {
+                    globals::g_player->yvel = 0;
+                    globals::g_player->setY(-62);
+                }
+            }
+            playerXtxt->text = "Player X: " + std::to_string(globals::g_player->rect.left);
+            playerYtxt->text = "Player Y: " + std::to_string(globals::g_player->rect.top);
             InvalidateRect(hWnd, &createRECT(0, 0, 10000, 10000), true);
             break;
         }

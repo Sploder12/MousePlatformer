@@ -41,6 +41,7 @@ void pnt(HWND hWnd)
 
 	globals::g_level->draw(&buffer, globals::g_player->Cx, globals::g_player->Cy, globals::g_mouseDown);
 	globals::g_player->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
+	
 
 	for (unsigned int i = 0; i < globals::g_ScreenObjects.size(); i++)
 	{

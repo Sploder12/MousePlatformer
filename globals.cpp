@@ -1,10 +1,11 @@
 #include "Globals.h"
 
-bool globals::g_debug = true;
+bool globals::g_debug = false;
 
 std::vector<screenObject*> globals::g_ScreenObjects;
 level* globals::g_level;
 player* globals::g_player;
+Image* globals::g_mousebox;
 
 long globals::g_mouseY = 0;
 long globals::g_mouseX = 0;
@@ -14,5 +15,5 @@ unsigned long long globals::timeNow = std::chrono::duration_cast<std::chrono::mi
 
 std::map<WPARAM, bool> globals::g_modKeys = { {VK_SHIFT, false}, {VK_CONTROL, false}, {VK_TAB, false} };
 
-unsigned int globals::refreshRate = 12;
+unsigned int globals::refreshRate = 13;
 float globals::g_fps = 0;
