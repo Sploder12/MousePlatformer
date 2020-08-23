@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <string>
 #include <fstream>
+#include <algorithm>
 
 struct screenObject
 {
@@ -302,6 +303,14 @@ struct tile
 	tileSet* tiles;
 	unsigned int tx;
 	unsigned int ty;
+	
+	int imgXOff = 0;
+	int imgYOff = 0;
+	int hitXOff = 0;
+	int hitYOff = 0;
+
+	unsigned short specialID = 0;
+
 	bool solid;
 	float friction = 0.0f;
 	bool killer = false;
@@ -319,7 +328,7 @@ struct tile
 
 	void draw(HDC * hdc, int x, int y)
 	{
-		tiles->draw(hdc, x, y, this->tx, this->ty);
+		tiles->draw(hdc, x+this->imgXOff, y+this->imgYOff, this->tx, this->ty);
 	}
 };
 
@@ -367,324 +376,15 @@ struct stage
 			}
 		}
 	}
-
+	
 	~stage()
 	{
-		size_t size = data.size();
+		size_t size = this->data.size();
 		for (unsigned int i = 0; i < size; i++)
 		{
-			delete data.at(i);
+			if (this->data.size() > 0) delete this->data.at(i);
 		}
-		data.clear();
-	}
-};
-
-struct player : screenObject
-{
-	unsigned int Cx;
-	unsigned int Cy;
-
-	HANDLE sprite;
-
-	std::map<WPARAM, bool> movementKeys = { {0x41, false}, {0x44, false}, {0x53, false}, {0x57, false}, {VK_SPACE, false} }; //A D S W SPACE
-
-	float xvel = 0;
-	float yvel = 0;
-
-	const float maxXVel = 6;
-	const float maxYVel = 6;
-
-	bool grounded = true;
-	float curFriction = 0.0f;
-
-	bool canMousebox = false;
-	bool mousebox = false;
-
-	unsigned int lvlStartX = 1;
-	unsigned int lvlStartY = 1;
-	unsigned int lvlStartCX = 1;
-	unsigned int lvlStartCY = 1;
-
-	player(RECT xy, HANDLE sprite, std::string loadDat = "") :
-		screenObject(xy, RGB(255, 255, 255), ""), sprite(sprite)
-	{
-		if (loadDat != "") loadPlayer(loadDat);
-	}
-
-	void loadPlayer(std::string data)
-	{
-	}
-
-	void moveX(float x)
-	{
-		this->rect.left += long(x);
-		this->rect.right += long(x + 64);
-	}
-
-	void moveY(float y)
-	{
-		this->rect.top += long(y);
-		this->rect.bottom += long(y + 64);
-	}
-
-	void setX(float x)
-	{
-		this->rect.left = long(x);
-		this->rect.right = long(x + 64);
-	}
-
-	void setY(float y)
-	{
-		this->rect.top = long(y);
-		this->rect.bottom = long(y + 64);
-	}
-
-	void kill()
-	{
-		setX(float(this->lvlStartX));
-		setY(float(this->lvlStartY));
-		this->Cx = lvlStartCX;
-		this->Cy = lvlStartCY;
-		this->xvel = 0;
-		this->yvel = 0;
-	}
-
-	bool touching(float x, float x2, float wid = 64)
-	{
-		return((x >= x2)&&(x <= (x2 + wid)));
-	}
-
-	bool touchingE(float x, float x2, float wid = 64)
-	{
-		return x >= x2 && x < x2 + wid;
-	}
-
-	void specialCollide(tile* curTile)
-	{
-		switch (curTile->tx)
-		{
-		case 0:
-			this->canMousebox = true;
-			curTile->tx = 2;
-			curTile->ty = 0;
-			curTile->solid = false;
-			break;
-		}
-	}
-
-	bool collideX(stage* stage)
-	{
-		float expectedX = this->rect.left + this->xvel;
-		for (unsigned int i = 0; i < 108; i++)
-		{
-			tile* curTile = stage->data.at(i);
-			float tileX = (float)(i % 12 * 64);
-			float tileY = (float)(floor(i / 12) * 64);
-			if (curTile->solid) {
-				bool res1 = touching(expectedX, tileX);
-				bool res2 = touching(expectedX + 64, tileX);
-				if (res1 || res2)
-				{
-					if ((this->rect.top >= tileY && this->rect.top < tileY+64) || (this->rect.top+64 > tileY && this->rect.top+64 < tileY + 64))
-					{
-						if (!curTile->killer) {
-							if (res1) this->setX(tileX + 64);
-							if (res2) this->setX(tileX - 64);
-						}
-						else this->kill();
-
-						if (curTile->ty == 4)
-						{
-							specialCollide(curTile);
-						}
-
-						return true;
-					}
-				}
-			}
-		}
-		return false;
-	}
-
-	bool collideMouseX(float mx, float my, bool correct = true)
-	{
-		float expectedX = this->rect.left + this->xvel;
-		bool res1 = touching(expectedX, mx, 64);
-		bool res2 = touching(expectedX + 64, mx, 64);
-		if (res1 || res2)
-		{
-			if ((this->rect.top >= my && this->rect.top < my + 64) || (this->rect.top + 64 > my && this->rect.top + 64 < my + 64))
-			{
-				if (res1 && correct) this->setX(mx + 64);
-				if (res2 && correct) this->setX(mx - 64);
-
-				return true;
-			}
-		}
-		return false;
-	}
-
-	bool collideY(stage* stage)
-	{
-		float expectedY = this->rect.top + this->yvel;
-		for (unsigned int i = 0; i < 108; i++)
-		{
-			tile* curTile = stage->data.at(i);
-			float tileX = (float)(i % 12 * 64);
-			float tileY = (float)(floor(i / 12) * 64);
-			if (curTile->solid) {
-				bool res1 = touching(expectedY, tileY);
-				bool res2 = touching(expectedY + 64, tileY);
-				if (res1 || res2)
-				{
-					if ((this->rect.left >= tileX && this->rect.left < tileX + 64) || (this->rect.left+64 > tileX && this->rect.left+64 < tileX+ 64))
-					{
-						if(!curTile->killer)
-						{
-							if (res1)
-							{
-								this->setY(tileY + 64);
-								this->yvel = 0;
-							}
-
-							if (res2)
-							{
-								this->setY(tileY - 64);
-								this->grounded = true;
-								this->curFriction = curTile->friction;
-								this->yvel = 0;
-							}
-
-							if (curTile->ty == 4)
-							{
-								specialCollide(curTile);
-							}
-						}
-						else this->kill();
-						return true;
-					}
-				}
-			}
-		}
-		return false;
-	}
-
-	bool collideMouseY(float mx, float my, bool correct = true)
-	{
-		float expectedY = this->rect.top + this->yvel;
-		bool res1 = touching(expectedY, my, 64);
-		bool res2 = touching(expectedY + 64, my, 64);
-		if (res1 || res2)
-		{
-			if ((this->rect.left >= mx && this->rect.left < mx + 64) || (this->rect.left + 64 > mx&& this->rect.left + 64 < mx + 64))
-			{
-				if (res1 && correct)
-				{
-					this->setY(my + 64);
-					this->yvel = 0;
-				}
-
-				if (res2 && correct)
-				{
-					this->setY(my - 64);
-					this->grounded = true;
-					this->curFriction = 0.5f;
-					this->yvel = 0;
-				}
-				return true;
-			}
-		}
-		return false;
-	}
-
-	void movePlayer(stage* stage, float mx, float my, bool shifting)
-	{
-		this->mousebox = shifting;
-		if (this->movementKeys.at(0x41) && !this->movementKeys.at(0x44))
-		{
-			if (this->xvel > -this->maxXVel)
-				this->xvel -= 1.2f;
-		}
-		else if (this->movementKeys.at(0x44) && !this->movementKeys.at(0x41))
-		{
-			if (this->xvel < this->maxXVel)
-				this->xvel += 1.2f;
-		}
-		else if(this->xvel != 0.0f)
-		{
-			this->xvel = (this->xvel < 0.0f) ? this->xvel + curFriction : this->xvel - curFriction;
-		}
-
-		if (this->xvel > -0.001f && this->xvel < 0.001f)
-		{
-			this->xvel = 0.0f;
-		}
-
-		if (collideX(stage))
-			this->xvel = 0.0f;
-		else moveX(this->xvel);
-
-		if (this->mousebox && this->canMousebox)
-		{
-			if (collideMouseX(mx, my))
-				this->xvel = 0.0f;
-		}
-		
-		if (this->grounded)
-		{
-			if (this->movementKeys.at(0x57) || this->movementKeys.at(VK_SPACE))
-			{
-				this->yvel -= 13.0f;
-				this->grounded = false;
-				this->curFriction = 0.075f; //friction due to air
-			}
-		}
-
-		this->yvel += 0.5f;
-		if (this->movementKeys.at(0x53))
-		{
-				this->yvel += 0.5f;
-		}
-
-		if (collideY(stage))
-			this->yvel = 0.0f;
-		else moveY(this->yvel);
-
-		if (this->mousebox && this->canMousebox)
-		{
-			if (collideMouseY(mx, my))
-				this->yvel = 0.0f;
-		}
-	}
-
-
-	void screenObject::press(int n = 0)
-	{
-	}
-
-	void screenObject::hide()
-	{
-		this->active = false;
-		this->visible = false;
-	}
-
-	void screenObject::show()
-	{
-		this->active = true;
-		this->visible = true;
-	}
-
-	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
-	{
-		BITMAP bm;
-		HDC hdcMem = CreateCompatibleDC(*hdc);
-		HGDIOBJ hbmOld = SelectObject(hdcMem, sprite);
-		GetObject(sprite, sizeof(bm), &bm);
-		BitBlt(*hdc, rect.left, rect.top, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCCOPY);
-		SelectObject(hdcMem, hbmOld);
-		DeleteDC(hdcMem);
-		DeleteObject(hbmOld);
-		return this->color;
+		this->data.clear();
 	}
 };
 
@@ -692,8 +392,8 @@ struct level : public screenObject
 {
 	stage* foreground = nullptr; //THESE ARE POINTERS TO ARRAYS
 	stage* background = nullptr;
-	unsigned int lw; //width of level (in stages)
-	unsigned int lh; //height of level (in stages)
+	unsigned int lw = 0; //width of level (in stages)
+	unsigned int lh = 0; //height of level (in stages)
 	unsigned int startCX;
 	unsigned int startCY;
 	unsigned int startX;
@@ -704,7 +404,7 @@ struct level : public screenObject
 
 	bool uninit = true;
 
-	const std::map<char, int> sIDs = { {'@',0}, {'#',1}, {'=',2}, {'|',3}, {'M',4}};
+	const std::map<char, int> sIDs = { {'@',0}, {'#',1}, {'=',2}, {'|',3}, {'M',4}, {'B', 5}, {'-',6} };
 	std::vector<tileSet*>* tileSets;
 	
 	level(std::string file, std::vector<tileSet*>* tileSet):
@@ -716,6 +416,12 @@ struct level : public screenObject
 
 	bool loadLevel(std::string file)
 	{
+		if(lw != 0 && lh != 0)
+		{
+			delete[] foreground;
+			delete[] background;
+			this->uninit = true;
+		}
 		std::fstream lvlDat;
 		lvlDat.open(file, std::ios::in);
 		if (lvlDat.is_open())
@@ -805,16 +511,51 @@ struct level : public screenObject
 					break;
 				case 4: //tileMods
 					unsigned int tileModindex;
-					temp = dat.substr(1, 2);
+					temp = dat.substr(1, dat.find_first_of('(')-1);
 					tileModindex = std::stoi(temp);
 					end = dat.find_first_of(')');
-					temp = dat.substr(4,end-4);
+					temp = dat.substr(dat.find_first_of('(')+1,end- (dat.find_first_of('(') + 1));
 					switch (temp.at(0))
 					{
 					case 's':
 						foreground[stag].data.at(tileModindex)->solid = (temp.at(2) == 'T');
 						break;
+					case 'k':
+						foreground[stag].data.at(tileModindex)->killer = (temp.at(2) == 'T');
+						break;
+					case 'x':
+						foreground[stag].data.at(tileModindex)->hitXOff = std::stoi(temp.substr(2));
+						foreground[stag].data.at(tileModindex)->imgXOff = std::stoi(temp.substr(2));
+						break;
+					case 'y':
+						foreground[stag].data.at(tileModindex)->hitYOff = std::stoi(temp.substr(2));
+						foreground[stag].data.at(tileModindex)->imgYOff = std::stoi(temp.substr(2));
+						break;
+					case 'X':
+						foreground[stag].data.at(tileModindex)->hitXOff = std::stoi(temp.substr(2));
+						break;
+					case 'Y':
+						foreground[stag].data.at(tileModindex)->hitYOff = std::stoi(temp.substr(2));
+						break;
+					case 'S':
+						foreground[stag].data.at(tileModindex)->specialID = std::stoi(temp.substr(2));
+						break;
+					case 'f':
+						foreground[stag].data.at(tileModindex)->friction = std::stof(temp.substr(2));
+						break;
 					}
+				
+					break;
+				case 5: //bgstart
+					temp = "";
+					if (dat.at(0) == 'N')
+						background[stag] = stage();
+					else temp += dat.substr(1, 24);
+					break;
+				case 6: //bgdata
+					temp += dat.substr(1, 24);
+					if (dat.at(25) == ';')
+						background[stag].loadStage(temp, tileSets, tilesetID);
 					break;
 				default:
 					return false;
@@ -852,19 +593,372 @@ struct level : public screenObject
 
 	COLORREF screenObject::draw(HDC* hdc, long playerCX, long playerCY, bool mouseDown)
 	{
+		background[(playerCX)+(playerCY * lw)].draw(hdc);
 		foreground[(playerCX)+(playerCY*lw)].draw(hdc);
 		return this->color;
 	}
 
 	~level()
 	{
-		for (size_t i = 0; i < lw * lh; i++)
-		{
-			if(foreground + 1 != nullptr)
-				delete (foreground + i);
+		delete[] foreground;
+		delete[] background;
+	}
+};
 
-			if (background + 1 != nullptr)
-				delete (background + i);
+struct player : screenObject
+{
+	unsigned int Cx;
+	unsigned int Cy;
+
+	HANDLE sprite;
+
+	level* lvlptr = nullptr;
+	HWND* wnd = nullptr;
+
+	std::map<WPARAM, bool> movementKeys = { {0x41, false}, {0x44, false}, {0x53, false}, {0x57, false}, {VK_SPACE, false} }; //A D S W SPACE
+
+	float xvel = 0;
+	float yvel = 0;
+
+	float xaccel = 1.2f;
+
+	const float maxXVel = 6;
+	const float maxYVel = 6;
+
+	bool grounded = true;
+	float curFriction = 0.0f;
+
+	bool canMousebox = false;
+	bool mousebox = false;
+
+	int lvl = 2;
+
+	unsigned int lvlStartX = 1;
+	unsigned int lvlStartY = 1;
+	unsigned int lvlStartCX = 1;
+	unsigned int lvlStartCY = 1;
+
+	player(RECT xy, HANDLE sprite, level* lvl, HWND* wnd, std::string loadDat = "") :
+		screenObject(xy, RGB(255, 255, 255), ""), sprite(sprite), lvlptr(lvl), wnd(wnd)
+	{
+		if (loadDat != "") loadPlayer(loadDat);
+	}
+
+	void loadPlayer(std::string data)
+	{
+	}
+
+	void moveX(float x)
+	{
+		this->rect.left += long(x);
+		this->rect.right += long(x + 64);
+	}
+
+	void moveY(float y)
+	{
+		this->rect.top += long(y);
+		this->rect.bottom += long(y + 64);
+
+	}
+
+	void setX(float x)
+	{
+		this->rect.left = long(x);
+		this->rect.right = long(x + 64);
+	}
+
+	void setY(float y)
+	{
+		this->rect.top = long(y);
+		this->rect.bottom = long(y + 64);
+	}
+
+	void kill()
+	{
+		setX(float(this->lvlStartX));
+		setY(float(this->lvlStartY));
+		this->Cx = lvlStartCX;
+		this->Cy = lvlStartCY;
+		this->xvel = 0;
+		this->yvel = 0;
+	}
+
+	bool touching(float x, float x2, float wid = 64)
+	{
+		return((x >= x2) && (x <= (x2 + wid)));
+	}
+
+	bool touchingE(float x, float x2, float wid = 64)
+	{
+		return x >= x2 && x < x2 + wid;
+	}
+
+	void specialCollide(tile* curTile)
+	{
+		RECT temp = { 0, 0, 784, 615 };
+		InvalidateRect(*this->wnd, &temp, true);
+		switch (curTile->tx)
+		{
+		case 0:
+			this->canMousebox = true;
+			curTile->tx = 2;
+			curTile->ty = 0;
+			curTile->solid = false;
+			break;
+		case 1:
+			this->lvl += 1;
+			curTile->tx = 1;
+			curTile->ty = 0;
+			curTile->solid = false;
+			break;
+		case 2:
+			curTile->tx = 4;
+			curTile->ty = 1;
+			curTile->hitYOff += 22;
+			int txoff = curTile->imgXOff;
+			int tyoff = curTile->imgYOff;
+			for (unsigned int j = 0; j < this->lvlptr->lw * this->lvlptr->lh; j++)
+			{
+				stage* stage = &(this->lvlptr->foreground[j]);
+				for (unsigned short i = 0; i < 108; i++)
+				{
+					if (stage->data.at(i)->specialID == curTile->specialID)
+					{
+						stage->data.at(i)->imgXOff = 800;
+						stage->data.at(i)->imgYOff = 800;
+						stage->data.at(i)->solid = false;
+					}
+				}
+			}
+			curTile->imgXOff = txoff;
+			curTile->imgYOff = tyoff;
+			curTile->solid = true;
+			break;
 		}
+	}
+
+	bool collideX(stage* stage)
+	{
+		float expectedX = this->rect.left + this->xvel;
+		unsigned char Cy = (this->rect.top < 0) ? 0 : unsigned char(round(this->rect.top / 64));
+		unsigned char start = (Cy > 0) ? ((Cy - 1) * 12): 0;
+		unsigned char end = (Cy < 8) ? ((Cy + 2) * 12): 108;
+		for (unsigned char i = start; i < end; i++)
+		{
+			tile* curTile = stage->data.at(i);
+			float tileX = (float)((i % 12 * 64) + curTile->hitXOff);
+			float tileY = (float)((floor(i / 12) * 64) + curTile->hitYOff);
+			if (curTile->solid) {
+				bool res1 = touching(expectedX, tileX);
+				bool res2 = touching(expectedX + 64, tileX);
+				if (res1 || res2)
+				{
+					if ((this->rect.top >= tileY && this->rect.top < tileY + 64) || (this->rect.top + 64 > tileY&& this->rect.top + 64 < tileY + 64))
+					{
+						if (!curTile->killer) {
+							if (res1) this->setX(tileX + 64);
+							if (res2) this->setX(tileX - 64);
+						}
+						else this->kill();
+
+						if (curTile->ty == 4)
+						{
+							specialCollide(curTile);
+						}
+
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	bool collideMouseX(float mx, float my, bool correct = true)
+	{
+		float expectedX = this->rect.left + this->xvel;
+		bool res1 = touching(expectedX, mx, 64);
+		bool res2 = touching(expectedX + 64, mx, 64);
+		if (res1 || res2)
+		{
+			if ((this->rect.top >= my && this->rect.top < my + 64) || (this->rect.top + 64 > my&& this->rect.top + 64 < my + 64))
+			{
+				if (res1 && correct) this->setX(mx + 64);
+				if (res2 && correct) this->setX(mx - 64);
+
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool collideY(stage* stage)
+	{
+		float expectedY = this->rect.top + this->yvel;
+		unsigned char Cy = (expectedY < 0) ? 0 : unsigned char(round(expectedY / 64));
+		unsigned char start = (Cy > 0) ? ((Cy - 1) * 12) : 0;
+		unsigned char end = (Cy < 8) ? ((Cy + 2) * 12) : 108;
+		for (unsigned char i = start; i < end; i++)
+		{
+			tile* curTile = stage->data.at(i);
+			float tileX = (float)((i % 12 * 64) + curTile->hitXOff);
+			float tileY = (float)((floor(i / 12) * 64) + curTile->hitYOff);
+			if (curTile->solid) {
+				bool res1 = touching(expectedY, tileY);
+				bool res2 = touching(expectedY + 64, tileY);
+				if (res1 || res2)
+				{
+					if ((this->rect.left >= tileX && this->rect.left < tileX + 64) || (this->rect.left + 64 > tileX&& this->rect.left + 64 < tileX + 64))
+					{
+						if (!curTile->killer)
+						{
+							if (res1)
+							{
+								this->setY(tileY + 64);
+								this->yvel = 0;
+							}
+
+							if (res2)
+							{
+								this->setY(tileY - 64);
+								this->grounded = true;
+								this->xaccel = 1.2f;
+								this->curFriction = curTile->friction;
+								this->yvel = 0;
+							}
+
+							if (curTile->ty == 4)
+							{
+								specialCollide(curTile);
+							}
+						}
+						else this->kill();
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	bool collideMouseY(float mx, float my, bool correct = true)
+	{
+		float expectedY = this->rect.top + this->yvel;
+		bool res1 = touching(expectedY, my, 64);
+		bool res2 = touching(expectedY + 64, my, 64);
+		if (res1 || res2)
+		{
+			if ((this->rect.left >= mx && this->rect.left < mx + 64) || (this->rect.left + 64 > mx&& this->rect.left + 64 < mx + 64))
+			{
+				if (res1 && correct)
+				{
+					this->setY(my + 64);
+					this->yvel = 0;
+				}
+
+				if (res2 && correct)
+				{
+					this->setY(my - 64);
+					this->grounded = true;
+					this->xaccel = 1.2f;
+					this->curFriction = 0.5f;
+					this->yvel = 0;
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void movePlayer(stage* stage, float mx, float my, bool shifting)
+	{
+		this->mousebox = shifting;
+		if (this->movementKeys.at(0x41) && !this->movementKeys.at(0x44))
+		{
+			if (this->xvel > -this->maxXVel)
+				this->xvel -= this->xaccel;
+		}
+		else if (this->movementKeys.at(0x44) && !this->movementKeys.at(0x41))
+		{
+			if (this->xvel < this->maxXVel)
+				this->xvel += this->xaccel;
+		}
+		else if (this->xvel != 0.0f)
+		{
+			this->xvel = (this->xvel < 0.0f) ? this->xvel + curFriction : this->xvel - curFriction;
+		}
+
+		if (this->xvel > -0.001f && this->xvel < 0.001f)
+		{
+			this->xvel = 0.0f;
+		}
+
+		if (collideX(stage))
+			this->xvel = 0.0f;
+		else moveX(this->xvel);
+
+		if (this->mousebox && this->canMousebox)
+		{
+			if (collideMouseX(mx, my))
+				this->xvel = 0.0f;
+		}
+
+		if (this->grounded)
+		{
+			if (this->movementKeys.at(0x57) || this->movementKeys.at(VK_SPACE))
+			{
+				this->yvel -= 13.0f;
+				this->grounded = false;
+				this->xaccel = 0.25;
+				this->curFriction = 0.1f; //friction due to air
+			}
+		}
+
+		if (this->movementKeys.at(0x53) && (this->rect.left > -60 && this->rect.left < 766))
+		{
+			this->yvel += 0.5f;
+		}
+
+		this->yvel += 0.5f;
+
+		if (collideY(stage))
+			this->yvel = 0.0f;
+		else moveY(this->yvel);
+
+		if (this->mousebox && this->canMousebox)
+		{
+			if (collideMouseY(mx, my))
+				this->yvel = 0.0f;
+		}
+	}
+
+
+	void screenObject::press(int n = 0)
+	{
+	}
+
+	void screenObject::hide()
+	{
+		this->active = false;
+		this->visible = false;
+	}
+
+	void screenObject::show()
+	{
+		this->active = true;
+		this->visible = true;
+	}
+
+	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
+	{
+		BITMAP bm;
+		HDC hdcMem = CreateCompatibleDC(*hdc);
+		HGDIOBJ hbmOld = SelectObject(hdcMem, sprite);
+		GetObject(sprite, sizeof(bm), &bm);
+		BitBlt(*hdc, rect.left, rect.top, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCCOPY);
+		SelectObject(hdcMem, hbmOld);
+		DeleteDC(hdcMem);
+		DeleteObject(hbmOld);
+		return this->color;
 	}
 };

@@ -86,5 +86,8 @@
     <Text Include="level1.txt">
       <Filter>World\tutorialCave</Filter>
     </Text>
+    <Text Include="level2.txt">
+      <Filter>World\tutorialCave</Filter>
+    </Text>
   </ItemGroup>
 </Project>

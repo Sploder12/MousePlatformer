@@ -5,4 +5,4 @@
 
 RECT createRECT(LONG left, LONG top, LONG width, LONG height);
 void drawText(HDC* hdc, std::string txt, RECT rect, int flag, COLORREF bgcol);
-void pnt(HWND hWnd);
+void pnt(HWND hWnd, RECT* region);

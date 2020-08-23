@@ -1,0 +1,72 @@
+Level Making guide
+==================
+The first line always is the header and has a '@' as the first character.
+the header determines variables for the whole level seperated by '/'.
+@(levelWidth)/(levelHeight)/(StartCellX)/(StartCellY)/(StartX)/(StartY)/(EndCellX)/(EndCellY)/(EndSide)/
+an example:
+@4/2/1/1/4/7/3/0/2/
+
+The amount of stages is determined by the levelWidth * levelHeight.
+Stages start with a stage header that has a '#' as the first character.
+The header determines what stagenumber it is and the tileset used in that stage.
+an example:
+#stage:0[tileset:1]
+
+A stage contains the foreground and background tiles.
+There are 108 tiles in both the background and foreground, DO NOT PUT IN ANYTHING OTHER THAN 108.
+The background is optional and can be ignored.
+
+The start of the foreground data always begins with '=' as the first character.
+The next 24 characters are for the tiles and correlates directly to the tileset.
+tile data needs to be two characters (ex: "01").
+There are 12 tiles per row and there are 9 rows.
+Each row after the first starts with '|'.
+The last row ends with ';'.
+an example:
+=000000000000000000000000,
+|000000000000000000001111,
+|000000000000000000111212,
+|111100000000001111121313,
+|131211010101111212131313,
+|131313010101131313131313,
+|131313010101131313131313,
+|131313010101131313131313,
+|131313010101131313131313;
+
+Tiles have preset properties based off of their tileID.
+These properties can be changed by creating a line starting with 'M'.
+numerical values are entered normally, boolean values use 'T' and 'F'.
+directly after the 'M' is the tile index in the stage (0-107).
+after the index is the modifer inside parentheses, only one modifer can be applied per line.
+the property id is a single character letter, here is a list:
+'s'- solid (bool)
+'k'- deadly (bool)
+'x'- x offset (number)
+'y'- y offset (number)
+'X'- hitbox x offset(number)
+'Y'- hitbox y offset(number)
+'S'- special ID(number)
+'f'- friction(float)
+an example:
+M13(s=T)
+
+Background tiles cannot be modified and are purely cosmetic.
+Due to the lack of transparent tiles this is only really needed with the 'x' or 'y' modifiers are used.
+The start of the background data always begins with 'B' as the first character.
+The next 24 characters are for the tiles and correlates directly to the tileset.
+tile data needs to be two characters (ex: "37").
+There are 12 tiles per row and there are 9 rows.
+Each row after the first starts with '-'.
+The last row ends with ';'.
+an example:
+B000000000000000000000014,
+-000000000000000000000014,
+-000000000000000000000014,
+-000000000000000000000014,
+-000000000000000000000003,
+-000000000000000000000003,
+-000000000000000000000003,
+-111111111111111111111114,
+-131313131313131313131313;
+
+To see an example of a full level see "level1.txt"

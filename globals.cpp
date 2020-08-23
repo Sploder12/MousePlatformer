@@ -1,6 +1,6 @@
 #include "Globals.h"
 
-bool globals::g_debug = false;
+bool globals::g_debug = true;
 
 std::vector<screenObject*> globals::g_ScreenObjects;
 level* globals::g_level;
