@@ -54,7 +54,7 @@ void pnt(HWND hWnd, RECT* region)
 	stage* background = globals::g_level->background;
 	stage* foreground = globals::g_level->foreground;
 	std::vector<tile*>* dat = &background[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].data;
-	if (background->exists) {
+	if (background[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].exists) {
 		for (unsigned char i = 0; i < 108; i++)
 		{
 			RECT temp = createRECT((i % 12) * 64, LONG(floor(i / 12)) * 64, 64, 64);
@@ -62,7 +62,7 @@ void pnt(HWND hWnd, RECT* region)
 		}
 	}
 	dat = &foreground[(globals::g_player->Cx)+(globals::g_player->Cy * globals::g_level->lw)].data;
-	if (foreground->exists) {
+	if (foreground[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].exists) {
 		for (unsigned char i = 0; i < 108; i++)
 		{
 			RECT temp = createRECT((i % 12) * 64, LONG(floor(i / 12)) * 64, 64, 64);

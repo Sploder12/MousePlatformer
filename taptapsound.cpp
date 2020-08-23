@@ -122,6 +122,9 @@ void buildScreenObjects()
     globals::g_player->setY(float(lvl->startY*64));
     globals::g_player->lvlStartX = lvl->startX * 64;
     globals::g_player->lvlStartY = lvl->startY * 64;
+    if (!globals::g_debug) globals::g_player->canMousebox = globals::g_level->startRune;
+    else globals::g_player->canMousebox = true;
+    if (!globals::g_debug) (globals::g_player->canMousebox) ? mousebox->show() : mousebox->hide();
 
     globals::g_mousebox = mousebox;
 
@@ -144,14 +147,7 @@ void buildScreenObjects()
 
     globals::g_ScreenObjects.push_back(fpstxt);
 
-    if (!globals::g_player->canMousebox) globals::g_mousebox->hide();
     globals::g_ScreenObjects.push_back(globals::g_mousebox);
-
-    if (globals::g_debug)
-    {
-        globals::g_player->canMousebox = true;
-        globals::g_mousebox->show();
-    }
 }
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
@@ -180,6 +176,23 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+bool loadLevel(std::string file)
+{
+    bool retur = globals::g_level->loadLevel(file);
+    globals::g_player->Cx = globals::g_level->startCX;
+    globals::g_player->lvlStartCX = globals::g_level->startCX;
+    globals::g_player->Cy = globals::g_level->startCY;
+    globals::g_player->lvlStartCY = globals::g_level->startCY;
+    globals::g_player->setX(float(globals::g_level->startX * 64));
+    globals::g_player->setY(float(globals::g_level->startY * 64));
+    globals::g_player->lvlStartX = globals::g_level->startX * 64;
+    globals::g_player->lvlStartY = globals::g_level->startY * 64;
+    if (!globals::g_debug) globals::g_player->canMousebox = globals::g_level->startRune;
+    if (!globals::g_debug) (globals::g_player->canMousebox) ? globals::g_mousebox->show() : globals::g_mousebox->hide();
+    globals::g_player->lvl += 1;
+    return retur;
+}
+
 void pressed(WPARAM key)
 {
     switch (key)
@@ -189,12 +202,23 @@ void pressed(WPARAM key)
         {
             globals::g_debug = !globals::g_debug;
             debugtxt->text = "Debug: " + std::to_string(globals::g_debug);
+            RECT temp = { 0, 0, 784, 615 };
+            InvalidateRect(wnd, &temp, true);
         }
         else
         {
             globals::g_player->movementKeys.at(0x44) = true;
         }
             
+        break;
+    case 0x52:
+        if (globals::g_modKeys.at(VK_SHIFT) && globals::g_modKeys.at(VK_TAB) && globals::g_modKeys.at(VK_CONTROL) && globals::g_debug)
+        {
+            globals::g_player->lvl -= 1;
+            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+            RECT temp = { 0, 0, 784, 615 };
+            InvalidateRect(wnd, &temp, true);
+        }
         break;
     case VK_SPACE:
     case 0x41:
@@ -217,21 +241,6 @@ void depressed(WPARAM key)
         globals::g_player->movementKeys.at(key) = false;
         break;
     }
-}
-
-bool loadLevel(std::string file)
-{
-    bool retur = globals::g_level->loadLevel(file);
-    globals::g_player->Cx = globals::g_level->startCX;
-    globals::g_player->lvlStartCX = globals::g_level->startCX;
-    globals::g_player->Cy = globals::g_level->startCY;
-    globals::g_player->lvlStartCY = globals::g_level->startCY;
-    globals::g_player->setX(float(globals::g_level->startX*64));
-    globals::g_player->setY(float(globals::g_level->startY*64));
-    globals::g_player->lvlStartX = globals::g_level->startX;
-    globals::g_player->lvlStartY = globals::g_level->startY;
-    globals::g_player->lvl += 1;
-    return retur;
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

@@ -401,6 +401,7 @@ struct level : public screenObject
 	unsigned int endCX;
 	unsigned int endCY;
 	unsigned int endS;
+	bool startRune = false;
 
 	bool uninit = true;
 
@@ -438,7 +439,7 @@ struct level : public screenObject
 				{
 				case 0: //Header
 					end = 0;
-					for (size_t i = 0; i < 9; i++)
+					for (size_t i = 0; i < 10; i++)
 					{
 						temp = "";
 						start = end + 1;
@@ -475,6 +476,9 @@ struct level : public screenObject
 							break;
 						case 8:
 							endS = std::stoi(temp);
+							break;
+						case 9:
+							startRune = (temp.at(0) == 'T')?true : false;
 							break;
 						}
 					}
@@ -675,6 +679,8 @@ struct player : screenObject
 
 	void kill()
 	{
+		RECT temp = { 0, 0, 784, 615 };
+		InvalidateRect(*this->wnd, &temp, true);
 		setX(float(this->lvlStartX));
 		setY(float(this->lvlStartY));
 		this->Cx = lvlStartCX;
