@@ -1,6 +1,13 @@
 #include "Globals.h"
 
-bool globals::g_debug = false;
+bool globals::g_debug = true;
+
+unsigned int globals::curScreen = 3; //0 is mainmenu, 1 is options, 2 is paused, 3 is level
+
+//paused buttons
+Button* globals::Resume;
+Button* globals::Options;
+Button* globals::Exit;
 
 std::vector<screenObject*> globals::g_ScreenObjects;
 level* globals::g_level;

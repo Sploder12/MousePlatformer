@@ -8,6 +8,12 @@ class globals {
 public:
 	static bool g_debug;
 
+	static unsigned int curScreen;
+
+	static Button* Resume;
+	static Button* Options;
+	static Button* Exit;
+
 	static std::vector<screenObject*> g_ScreenObjects;
 	static level* g_level;
 	static player* g_player;

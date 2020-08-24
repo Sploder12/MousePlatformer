@@ -388,6 +388,8 @@ struct stage
 	}
 };
 
+#define SIDS std::map<char, int>{ {'@',0}, {'#',1}, {'=',2}, {'|',3}, {'M',4}, {'B', 5}, {'-',6} }
+
 struct level : public screenObject
 {
 	stage* foreground = nullptr; //THESE ARE POINTERS TO ARRAYS
@@ -405,7 +407,6 @@ struct level : public screenObject
 
 	bool uninit = true;
 
-	const std::map<char, int> sIDs = { {'@',0}, {'#',1}, {'=',2}, {'|',3}, {'M',4}, {'B', 5}, {'-',6} };
 	std::vector<tileSet*>* tileSets;
 	
 	level(std::string file, std::vector<tileSet*>* tileSet):
@@ -435,7 +436,7 @@ struct level : public screenObject
 			unsigned int tilesetID;
 			std::string temp = "";
 			while (std::getline(lvlDat, dat)) {
-				switch (sIDs.at(dat.at(0)))
+				switch (SIDS.at(dat.at(0)))
 				{
 				case 0: //Header
 					end = 0;
@@ -609,6 +610,11 @@ struct level : public screenObject
 	}
 };
 
+#define MAXXVEL 6.0f
+#define MAXYVEL 64.0f
+#define AIRFRIC 0.1f
+#define GRAVITY 0.5f
+
 struct player : screenObject
 {
 	unsigned int Cx;
@@ -625,9 +631,6 @@ struct player : screenObject
 	float yvel = 0;
 
 	float xaccel = 1.2f;
-
-	const float maxXVel = 6;
-	const float maxYVel = 6;
 
 	bool grounded = true;
 	float curFriction = 0.0f;
@@ -881,12 +884,12 @@ struct player : screenObject
 		this->mousebox = shifting;
 		if (this->movementKeys.at(0x41) && !this->movementKeys.at(0x44))
 		{
-			if (this->xvel > -this->maxXVel)
+			if (this->xvel > -MAXXVEL)
 				this->xvel -= this->xaccel;
 		}
 		else if (this->movementKeys.at(0x44) && !this->movementKeys.at(0x41))
 		{
-			if (this->xvel < this->maxXVel)
+			if (this->xvel < MAXXVEL)
 				this->xvel += this->xaccel;
 		}
 		else if (this->xvel != 0.0f)
@@ -916,16 +919,19 @@ struct player : screenObject
 				this->yvel -= 13.0f;
 				this->grounded = false;
 				this->xaccel = 0.25;
-				this->curFriction = 0.1f; //friction due to air
+				this->curFriction = AIRFRIC;
 			}
 		}
 
-		if (this->movementKeys.at(0x53) && (this->rect.left > -60 && this->rect.left < 766))
-		{
-			this->yvel += 0.5f;
-		}
+		if (this->yvel < MAXYVEL) {
+			if (this->movementKeys.at(0x53) && (this->rect.left > -60 && this->rect.left < 766))
+			{
+				this->yvel += 0.5f;
+			}
 
-		this->yvel += 0.5f;
+			this->yvel += GRAVITY;
+		}
+		if (this->yvel > MAXYVEL) this->yvel = MAXYVEL;
 
 		if (collideY(stage))
 			this->yvel = 0.0f;
@@ -966,5 +972,10 @@ struct player : screenObject
 		DeleteDC(hdcMem);
 		DeleteObject(hbmOld);
 		return this->color;
+	}
+
+	void save()
+	{
+
 	}
 };

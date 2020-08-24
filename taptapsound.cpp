@@ -3,6 +3,8 @@
 #include <chrono>
 
 #define MAX_LOADSTRING 100
+#define SWIDTH 784
+#define SHEIGHT 615
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -79,9 +81,16 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-void thing(int n)
+void resume(int n) { globals::curScreen = 3; }
+
+void options(int n) { globals::curScreen = 1; }
+
+void quit(int n)
 {
-    globals::g_ScreenObjects.at(0)->color = RGB(50, 120, 200);
+    delete globals::g_level;
+    globals::curScreen = 0;
+    globals::g_player->save();
+    globals::g_player->lvl = 1;
 }
 
 tileSet* tileset = new tileSet(TSimg, 64, 64);
@@ -106,8 +115,13 @@ Text* debugtxt = new Text(createRECT(0, 140, 250, 18), RGB(255, 255, 255), "Debu
 Text* fpstxt = new Text(createRECT(0, 165, 250, 18), RGB(255, 255, 255), "FPS: " + std::to_string(globals::g_fps), DT_LEFT, true);
 
 Image* mousebox = new Image(createRECT(0, 0, 64, 64), mouseSpriteU);
+
 void buildScreenObjects()
 {
+    globals::Resume = new Button(createRECT(225, 90, 300, 100), RGB(70, 125, 150), &resume, "Resume");
+    globals::Options = new Button(createRECT(225, 240, 300, 100), RGB(70, 125, 150), &options, "Options");
+    globals::Exit = new Button(createRECT(225, 390, 300, 100), RGB(70, 125, 150), &quit, "Exit");
+
     tileset->source = TSimg;
     tilesets.push_back(tileset);
     lvl = new level("level1.txt", &tilesets);
@@ -118,8 +132,8 @@ void buildScreenObjects()
     globals::g_player->Cy = lvl->startCY;
     globals::g_player->lvlStartCX = lvl->startCX;
     globals::g_player->lvlStartCY = lvl->startCY;
-    globals::g_player->setX(float(lvl->startX*64));
-    globals::g_player->setY(float(lvl->startY*64));
+    globals::g_player->setX(float(lvl->startX * 64));
+    globals::g_player->setY(float(lvl->startY * 64));
     globals::g_player->lvlStartX = lvl->startX * 64;
     globals::g_player->lvlStartY = lvl->startY * 64;
     if (!globals::g_debug) globals::g_player->canMousebox = globals::g_level->startRune;
@@ -155,7 +169,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Store instance handle in our global variable
 
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX,
-      CW_USEDEFAULT, 0, 784, 615, nullptr, nullptr, hInstance, nullptr);
+      CW_USEDEFAULT, 0, SWIDTH, SHEIGHT, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -197,27 +211,44 @@ void pressed(WPARAM key)
 {
     switch (key)
     {
+    case VK_ESCAPE:
+        if (globals::curScreen > 0) 
+        {
+            if (globals::curScreen == 1)
+            {
+                if (globals::g_level->foreground[0].exists) globals::curScreen = 3;
+                else globals::curScreen = 0;
+            }
+            else
+            {
+                globals::curScreen = (globals::curScreen == 3) ? 2 : 3;
+            }
+            RECT temp = { 0, 0, SWIDTH, SHEIGHT };
+            InvalidateRect(wnd, &temp, true);
+        }
+        break;
     case 0x44:
         if (globals::g_modKeys.at(VK_SHIFT) && globals::g_modKeys.at(VK_TAB) && globals::g_modKeys.at(VK_CONTROL))
         {
             globals::g_debug = !globals::g_debug;
             debugtxt->text = "Debug: " + std::to_string(globals::g_debug);
-            RECT temp = { 0, 0, 784, 615 };
+            RECT temp = { 0, 0, SWIDTH, SHEIGHT };
             InvalidateRect(wnd, &temp, true);
         }
         else
         {
             globals::g_player->movementKeys.at(0x44) = true;
         }
-            
         break;
     case 0x52:
         if (globals::g_modKeys.at(VK_SHIFT) && globals::g_modKeys.at(VK_TAB) && globals::g_modKeys.at(VK_CONTROL) && globals::g_debug)
         {
-            globals::g_player->lvl -= 1;
-            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
-            RECT temp = { 0, 0, 784, 615 };
-            InvalidateRect(wnd, &temp, true);
+            if (globals::curScreen == 3) {
+                globals::g_player->lvl -= 1;
+                loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                RECT temp = { 0, 0, SWIDTH, SHEIGHT };
+                InvalidateRect(wnd, &temp, true);
+            }
         }
         break;
     case VK_SPACE:
@@ -275,26 +306,51 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         globals::g_mouseY = GET_Y_LPARAM(lParam);
         mouseXtxt->text = "Mouse X: " + std::to_string(globals::g_mouseX);
         mouseYtxt->text = "Mouse Y: " + std::to_string(globals::g_mouseY);
-        if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top+32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
-            if (globals::g_modKeys.at(VK_SHIFT) || globals::g_mouseDown) globals::g_player->mousebox = true;
+        if(globals::curScreen == 3)
+            if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top+32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
+                if (globals::g_modKeys.at(VK_SHIFT) || globals::g_mouseDown) globals::g_player->mousebox = true;
         break;
     case WM_LBUTTONDOWN:
         globals::g_mouseDown = true;
         mouseDowntxt->text = "Mouse Down: True";
-        if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top + 32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
-            globals::g_player->mousebox = true;
-        else mousebox->image = mouseSpriteB;
-        for (unsigned int i = 0; i < globals::g_ScreenObjects.size(); i++)
+        switch(globals::curScreen) 
         {
-            if (globals::g_ScreenObjects.at(i)->active && globals::g_ScreenObjects.at(i)->Touching(globals::g_mouseX, globals::g_mouseY))
+        case 2:
+            if (globals::Resume->active && globals::Resume->Touching(globals::g_mouseX, globals::g_mouseY))
             {
-                globals::g_ScreenObjects.at(i)->press(i);
+                globals::Resume->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
             }
+            if (globals::Options->active && globals::Options->Touching(globals::g_mouseX, globals::g_mouseY))
+            {
+                globals::Options->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+            }
+            if (globals::Exit->active && globals::Exit->Touching(globals::g_mouseX, globals::g_mouseY))
+            {
+                globals::Exit->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+            }
+
+            break;
+        case 3:
+            if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top + 32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
+                globals::g_player->mousebox = true;
+            else mousebox->image = mouseSpriteB;
+            for (unsigned int i = 0; i < globals::g_ScreenObjects.size(); i++)
+            {
+                if (globals::g_ScreenObjects.at(i)->active && globals::g_ScreenObjects.at(i)->Touching(globals::g_mouseX, globals::g_mouseY))
+                {
+                    globals::g_ScreenObjects.at(i)->press(i);
+                }
+            }
+            break;
         }
         break;
     case WM_LBUTTONUP:
         globals::g_mouseDown = false;
-        if(!globals::g_modKeys.at(VK_SHIFT)) globals::g_player->mousebox = false;
+        if (globals::curScreen == 3)
+            if(!globals::g_modKeys.at(VK_SHIFT)) globals::g_player->mousebox = false;
         mouseDowntxt->text = "Mouse Down: False";
         break;
     case WM_KEYDOWN:
@@ -302,9 +358,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
         case VK_SHIFT:
             globals::g_modKeys.at(VK_SHIFT) = true;
-            if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top + 32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
-                globals::g_player->mousebox = true;
-            else mousebox->image = mouseSpriteB;
+            if (globals::curScreen == 3)
+                if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top + 32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
+                    globals::g_player->mousebox = true;
+                else mousebox->image = mouseSpriteB;
             break;
         case VK_CONTROL:
             globals::g_modKeys.at(VK_CONTROL) = true;
@@ -324,7 +381,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
         case VK_SHIFT:
             globals::g_modKeys.at(VK_SHIFT) = false;
-            if(!globals::g_mouseDown)globals::g_player->mousebox = false;
+            if (globals::curScreen == 3)
+                if(!globals::g_mouseDown)globals::g_player->mousebox = false;
             break;
         case VK_CONTROL:
             globals::g_modKeys.at(VK_CONTROL) = false;
@@ -348,115 +406,123 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             globals::g_fps = 1000 / (float)(globals::timeNow - lasttime);
             fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
             timetxt->text = "Time Now: " + std::to_string(globals::timeNow);
-            unsigned int playerCell = (globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw);
-            RECT temp = createRECT(mousebox->rect.left - 32, mousebox->rect.top - 32, 128, 128);
-            if (globals::g_player->canMousebox) globals::g_mousebox->show();
-            if (!globals::g_player->mousebox)
+            switch(globals::curScreen )
             {
-                mousebox->rect.left = globals::g_mouseX - 32;
-                mousebox->rect.right = globals::g_mouseX + 32;
-                mousebox->rect.top = globals::g_mouseY - 32;
-                mousebox->rect.bottom = globals::g_mouseY + 32;
-                if(!globals::g_modKeys.at(VK_SHIFT) && !globals::g_mouseDown)
-                    mousebox->image = mouseSpriteU;
-                InvalidateRect(hWnd, &(temp), true);
-            }
-            else {
-                mousebox->image = mouseSpriteA;
-                InvalidateRect(hWnd, &(temp), true);
-            }
-            temp = createRECT(globals::g_player->rect.left - 16, globals::g_player->rect.top - 16, 86, 86);
-            InvalidateRect(hWnd, &(temp), true);
-            globals::g_player->movePlayer(&(globals::g_level->foreground[playerCell]), float(mousebox->rect.left), float(mousebox->rect.top), globals::g_player->mousebox);
-            temp = createRECT(globals::g_player->rect.left - 16, globals::g_player->rect.top - 16, 86, 86);
-            InvalidateRect(hWnd, &(temp), true);
-            if (globals::g_player->rect.left >= 768)
-            {
-                if (globals::g_player->Cx < globals::g_level->lw - 1)
+            case 2:
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+                break;
+            case 3:
+                unsigned int playerCell = (globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw);
+                RECT temp = createRECT(mousebox->rect.left - 32, mousebox->rect.top - 32, 128, 128);
+                if (globals::g_player->canMousebox) globals::g_mousebox->show();
+                if (!globals::g_player->mousebox)
                 {
-                    globals::g_player->Cx += 1;
-                    globals::g_player->setX(-62);
-                    globals::g_player->moveY(-globals::g_player->yvel);
+                    mousebox->rect.left = globals::g_mouseX - 32;
+                    mousebox->rect.right = globals::g_mouseX + 32;
+                    mousebox->rect.top = globals::g_mouseY - 32;
+                    mousebox->rect.bottom = globals::g_mouseY + 32;
+                    if (!globals::g_modKeys.at(VK_SHIFT) && !globals::g_mouseDown)
+                        mousebox->image = mouseSpriteU;
+                    InvalidateRect(hWnd, &(temp), true);
                 }
-                else 
+                else {
+                    mousebox->image = mouseSpriteA;
+                    InvalidateRect(hWnd, &(temp), true);
+                }
+                temp = createRECT(globals::g_player->rect.left - 16, globals::g_player->rect.top - 16, 86, 86);
+                InvalidateRect(hWnd, &(temp), true);
+                globals::g_player->movePlayer(&(globals::g_level->foreground[playerCell]), float(mousebox->rect.left), float(mousebox->rect.top), globals::g_player->mousebox);
+                temp = createRECT(globals::g_player->rect.left - 16, globals::g_player->rect.top - 16, 86, 86);
+                InvalidateRect(hWnd, &(temp), true);
+                if (globals::g_player->rect.left >= 768)
                 {
-                    if (globals::g_level->endS == 2 && globals::g_player->Cy == globals::g_level->endCY)
+                    if (globals::g_player->Cx < globals::g_level->lw - 1)
                     {
-                        loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                        globals::g_player->Cx += 1;
+                        globals::g_player->setX(-62);
+                        globals::g_player->moveY(-globals::g_player->yvel);
                     }
                     else
                     {
-                        globals::g_player->xvel = -1.0f;
-                        globals::g_player->setX(766);
+                        if (globals::g_level->endS == 2 && globals::g_player->Cy == globals::g_level->endCY)
+                        {
+                            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                        }
+                        else
+                        {
+                            globals::g_player->xvel = -1.0f;
+                            globals::g_player->setX(766);
+                        }
                     }
+                    InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
                 }
-                InvalidateRect(hWnd, &createRECT(0, 0, 784, 615), true);
-            }
-            else if (globals::g_player->rect.left + 64 <= 0)
-            {
-                if(globals::g_player->Cx > 0)
+                else if (globals::g_player->rect.left + 64 <= 0)
                 {
-                    globals::g_player->Cx -= 1;
-                    globals::g_player->setX(767);
-                    globals::g_player->moveY(-globals::g_player->yvel);
-                }
-                else
-                {
-                    if (globals::g_level->endS == 0 && globals::g_player->Cy == globals::g_level->endCY)
+                    if (globals::g_player->Cx > 0)
                     {
-                        loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                        globals::g_player->Cx -= 1;
+                        globals::g_player->setX(767);
+                        globals::g_player->moveY(-globals::g_player->yvel);
                     }
                     else
                     {
-                        globals::g_player->xvel = 1.0f;
-                        globals::g_player->setX(-63);
+                        if (globals::g_level->endS == 0 && globals::g_player->Cy == globals::g_level->endCY)
+                        {
+                            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                        }
+                        else
+                        {
+                            globals::g_player->xvel = 1.0f;
+                            globals::g_player->setX(-63);
+                        }
                     }
+                    InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
                 }
-                InvalidateRect(hWnd, &createRECT(0, 0, 784, 615), true);
-            }
 
-            if (globals::g_player->rect.top >= 576)
-            {
-                if (globals::g_player->Cy < globals::g_level->lh - 1)
+                if (globals::g_player->rect.top >= 576)
                 {
-                    globals::g_player->Cy += 1;
-                    globals::g_player->setY(-62);
-                }
-                else
-                {
-                    if (globals::g_level->endS == 3 && globals::g_player->Cx == globals::g_level->endCX)
+                    if (globals::g_player->Cy < globals::g_level->lh - 1)
                     {
-                        loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
-                    }
-                    else
-                    {
-                        globals::g_player->yvel = 0;
-                        globals::g_player->setY(575);
-                        globals::g_player->grounded = true;
-                    }
-                }
-                InvalidateRect(hWnd, &createRECT(0, 0, 784, 615), true);
-            }
-            else if (globals::g_player->rect.top + 64 <= 0)
-            {
-                if (globals::g_player->Cy > 0)
-                {
-                    globals::g_player->Cy -= 1;
-                    globals::g_player->setY(575);
-                }
-                else
-                {
-                    if (globals::g_level->endS == 0 && globals::g_player->Cx == globals::g_level->endCX)
-                    {
-                        globals::g_level->loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
-                    }
-                    else
-                    {
-                        globals::g_player->yvel = 0;
+                        globals::g_player->Cy += 1;
                         globals::g_player->setY(-62);
                     }
+                    else
+                    {
+                        if (globals::g_level->endS == 3 && globals::g_player->Cx == globals::g_level->endCX)
+                        {
+                            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                        }
+                        else
+                        {
+                            globals::g_player->yvel = 0;
+                            globals::g_player->setY(575);
+                            globals::g_player->grounded = true;
+                        }
+                    }
+                    InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
                 }
-                InvalidateRect(hWnd, &createRECT(0, 0, 784, 615), true);
+                else if (globals::g_player->rect.top + 64 <= 0)
+                {
+                    if (globals::g_player->Cy > 0)
+                    {
+                        globals::g_player->Cy -= 1;
+                        globals::g_player->setY(575);
+                    }
+                    else
+                    {
+                        if (globals::g_level->endS == 0 && globals::g_player->Cx == globals::g_level->endCX)
+                        {
+                            globals::g_level->loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                        }
+                        else
+                        {
+                            globals::g_player->yvel = 0;
+                            globals::g_player->setY(-62);
+                        }
+                    }
+                    InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+                }
+                break;
             }
             playerXtxt->text = "Player X: " + std::to_string(globals::g_player->rect.left);
             playerYtxt->text = "Player Y: " + std::to_string(globals::g_player->rect.top);
