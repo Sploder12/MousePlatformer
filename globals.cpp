@@ -23,4 +23,4 @@ unsigned long long globals::timeNow = std::chrono::duration_cast<std::chrono::mi
 std::map<WPARAM, bool> globals::g_modKeys = { {VK_SHIFT, false}, {VK_CONTROL, false}, {VK_TAB, false} };
 
 unsigned int globals::refreshRate = 13;
-float globals::g_fps = 0;
+double globals::g_fps = 0;

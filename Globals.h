@@ -28,5 +28,5 @@ public:
 	static std::map<WPARAM, bool> g_modKeys;
 
 	static unsigned int refreshRate;
-	static float g_fps;
+	static double g_fps;
 };

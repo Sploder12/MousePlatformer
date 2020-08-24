@@ -3,7 +3,7 @@
 #define BGCOLOR RGB(28, 48, 68)
 HBRUSH bg = CreateSolidBrush(BGCOLOR);
 
-RECT createRECT(LONG left, LONG top, LONG width, LONG height)
+RECT createRECT(int left, int top, int width, int height)
 {
 	RECT rect = RECT();
 	rect.left = left;
@@ -13,7 +13,7 @@ RECT createRECT(LONG left, LONG top, LONG width, LONG height)
 	return rect;
 }
 
-void drawText(HDC* hdc, std::string txt, RECT rect, int flag, COLORREF bgcol)
+void drawText(HDC* hdc, std::string txt, RECT rect, unsigned int flag, COLORREF bgcol)
 {
 	COLORREF oldBGcol = GetBkColor(*hdc);
 	if (bgcol == NULL)
@@ -76,7 +76,7 @@ void pnt(HWND hWnd, RECT* region)
 		if (background[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].exists) {
 			for (unsigned char i = 0; i < 108; i++)
 			{
-				temprect = createRECT((i % 12) * 64, LONG(floor(i / 12)) * 64, 64, 64);
+				temprect = createRECT((i % 12) * 64, int(floor(i / 12)) * 64, 64, 64);
 				if (intersecting(temprect, *region)) dat->at(i)->draw(&buffer, temprect.left, temprect.top);
 			}
 		}
@@ -84,14 +84,14 @@ void pnt(HWND hWnd, RECT* region)
 		if (foreground[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].exists) {
 			for (unsigned char i = 0; i < 108; i++)
 			{
-				temprect = createRECT((i % 12) * 64, LONG(floor(i / 12)) * 64, 64, 64);
+				temprect = createRECT((i % 12) * 64, int(floor(i / 12)) * 64, 64, 64);
 				if (intersecting(temprect, *region)) dat->at(i)->draw(&buffer, temprect.left, temprect.top);
 			}
 		}
 
 		if (intersecting(globals::g_player->rect, *region)) globals::g_player->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
 
-		for (unsigned int i = 0; i < globals::g_ScreenObjects.size(); i++)
+		for (unsigned short i = 0; i < globals::g_ScreenObjects.size(); i++)
 		{
 			if (intersecting(globals::g_ScreenObjects.at(i)->rect, *region))
 			{

@@ -281,7 +281,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_COMMAND:
         {
-            int wmId = LOWORD(wParam);
+            short wmId = LOWORD(wParam);
             switch (wmId)
             {
             case IDM_EXIT:
@@ -337,7 +337,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top + 32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
                 globals::g_player->mousebox = true;
             else mousebox->image = mouseSpriteB;
-            for (unsigned int i = 0; i < globals::g_ScreenObjects.size(); i++)
+            for (unsigned short i = 0; i < globals::g_ScreenObjects.size(); i++)
             {
                 if (globals::g_ScreenObjects.at(i)->active && globals::g_ScreenObjects.at(i)->Touching(globals::g_mouseX, globals::g_mouseY))
                 {
@@ -403,7 +403,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case 1:
             unsigned long long lasttime = globals::timeNow;
             globals::timeNow = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            globals::g_fps = 1000 / (float)(globals::timeNow - lasttime);
+            globals::g_fps = 1000.0 / (double)(globals::timeNow - lasttime);
             fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
             timetxt->text = "Time Now: " + std::to_string(globals::timeNow);
             switch(globals::curScreen )
@@ -412,7 +412,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
                 break;
             case 3:
-                unsigned int playerCell = (globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw);
+                unsigned short playerCell = (globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw);
                 RECT temp = createRECT(mousebox->rect.left - 32, mousebox->rect.top - 32, 128, 128);
                 if (globals::g_player->canMousebox) globals::g_mousebox->show();
                 if (!globals::g_player->mousebox)

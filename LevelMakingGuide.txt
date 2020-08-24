@@ -1,5 +1,8 @@
 Level Making guide
 ==================
+NOTE: There is a limit to how big a level is, it cannot exceed 255 stages in either length or width;
+(255x255 is the largest possible level)
+
 The first line always is the header and has a '@' as the first character.
 the header determines variables for the whole level seperated by '/'.
 @(levelWidth)/(levelHeight)/(StartCellX)/(StartCellY)/(StartX)/(StartY)/(EndCellX)/(EndCellY)/(EndSide)/(startWithRune)/
