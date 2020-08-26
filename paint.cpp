@@ -54,9 +54,26 @@ void pnt(HWND hWnd, RECT* region)
 	RECT temprect;
 	switch (globals::curScreen)
 	{
+	case 0:
+		tempCol = globals::NewGame->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
+		temprect = globals::NewGame->rect;
+		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
+		drawText(&buffer, globals::NewGame->text, temprect, globals::NewGame->txtFlag, tempCol);
+		tempCol = globals::Continue->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
+		temprect = globals::Continue->rect;
+		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
+		drawText(&buffer, globals::Continue->text, temprect, globals::Continue->txtFlag, tempCol);
+		tempCol = globals::Options0->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
+		temprect = globals::Options0->rect;
+		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
+		drawText(&buffer, globals::Options0->text, temprect, globals::Options0->txtFlag, tempCol);
+		tempCol = globals::End->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
+		temprect = globals::End->rect;
+		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
+		drawText(&buffer, globals::End->text, temprect, globals::End->txtFlag, tempCol);
+		break;
 	case 2:
 		tempCol = globals::Resume->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		SelectObject(buffer, buffermap);
 		temprect = globals::Resume->rect;
 		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
 		drawText(&buffer, globals::Resume->text, temprect, globals::Resume->txtFlag, tempCol);

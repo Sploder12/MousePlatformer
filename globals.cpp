@@ -1,8 +1,14 @@
-#include "Globals.h"
+  #include "Globals.h"
 
 bool globals::g_debug = true;
 
-unsigned int globals::curScreen = 3; //0 is mainmenu, 1 is options, 2 is paused, 3 is level
+unsigned int globals::curScreen = 0; //0 is mainmenu, 1 is options, 2 is paused, 3 is level
+
+//main menu buttons
+Button* globals::NewGame;
+Button* globals::Continue;
+Button* globals::Options0;
+Button* globals::End;
 
 //paused buttons
 Button* globals::Resume;
@@ -23,4 +29,4 @@ unsigned long long globals::timeNow = std::chrono::duration_cast<std::chrono::mi
 std::map<WPARAM, bool> globals::g_modKeys = { {VK_SHIFT, false}, {VK_CONTROL, false}, {VK_TAB, false} };
 
 unsigned int globals::refreshRate = 13;
-double globals::g_fps = 0;
+unsigned int globals::g_fps = 0;

@@ -87,10 +87,29 @@ void options(int n) { globals::curScreen = 1; }
 
 void quit(int n)
 {
-    delete globals::g_level;
+    //delete globals::g_level;
     globals::curScreen = 0;
+    globals::g_player->lvl -= 1;
     globals::g_player->save();
     globals::g_player->lvl = 1;
+}
+
+bool loadLevel(std::string file)
+{
+    bool retur = globals::g_level->loadLevel(file);
+    globals::g_player->Cx = globals::g_level->startCX;
+    globals::g_player->lvlStartCX = globals::g_level->startCX;
+    globals::g_player->Cy = globals::g_level->startCY;
+    globals::g_player->lvlStartCY = globals::g_level->startCY;
+    globals::g_player->setX(float(globals::g_level->startX * 64));
+    globals::g_player->setY(float(globals::g_level->startY * 64));
+    globals::g_player->lvlStartX = globals::g_level->startX * 64;
+    globals::g_player->lvlStartY = globals::g_level->startY * 64;
+    if (!globals::g_debug) globals::g_player->canMousebox = globals::g_level->startRune;
+    if (!globals::g_debug) (globals::g_player->canMousebox) ? globals::g_mousebox->show() : globals::g_mousebox->hide();
+    globals::g_player->save();
+    globals::g_player->lvl += 1;
+    return retur;
 }
 
 tileSet* tileset = new tileSet(TSimg, 64, 64);
@@ -116,12 +135,63 @@ Text* fpstxt = new Text(createRECT(0, 165, 250, 18), RGB(255, 255, 255), "FPS: "
 
 Image* mousebox = new Image(createRECT(0, 0, 64, 64), mouseSpriteU);
 
+void startN(int n)
+{
+    globals::g_player->lvl = 1;
+    loadLevel("level1.txt");
+    globals::curScreen = 3;
+}
+
+void cont(int n)
+{
+    if (globals::g_player->load())
+        loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+    else startN(0);
+
+    globals::curScreen = 3;
+}
+
+void end(int n)
+{
+    delete globals::NewGame;
+    delete globals::Continue;
+    delete globals::Options0;
+    delete globals::End;
+
+    delete globals::Resume;
+    delete globals::Options;
+    delete globals::Exit;
+
+    delete globals::g_player;
+    if(!globals::g_level->uninit)delete globals::g_level;
+
+    unsigned short tmp = unsigned short(tilesets.size());
+    for (unsigned short i = 0; i < tmp; i++)
+    {
+        delete tilesets.at(i);
+    }
+
+    tmp = unsigned short(globals::g_ScreenObjects.size());
+    for (unsigned short i = 0; i < tmp; i++)
+    {
+        delete globals::g_ScreenObjects.at(i);
+    }
+
+    exit(0);
+}
+
 void buildScreenObjects()
 {
+    globals::NewGame = new Button(createRECT(225, 0, 300, 100), RGB(70, 125, 150), &startN, "New Game");
+    globals::Continue = new Button(createRECT(225, 90, 300, 100), RGB(70, 125, 150), &cont, "Continue");
+    globals::Options0 = new Button(createRECT(225, 240, 300, 100), RGB(70, 125, 150), &options, "Options");
+    globals::End = new Button(createRECT(225, 390, 300, 100), RGB(70, 125, 150), &end, "Exit");
+    
     globals::Resume = new Button(createRECT(225, 90, 300, 100), RGB(70, 125, 150), &resume, "Resume");
     globals::Options = new Button(createRECT(225, 240, 300, 100), RGB(70, 125, 150), &options, "Options");
     globals::Exit = new Button(createRECT(225, 390, 300, 100), RGB(70, 125, 150), &quit, "Exit");
 
+    tilesets.reserve(1);
     tileset->source = TSimg;
     tilesets.push_back(tileset);
     lvl = new level("level1.txt", &tilesets);
@@ -188,23 +258,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
 
    return TRUE;
-}
-
-bool loadLevel(std::string file)
-{
-    bool retur = globals::g_level->loadLevel(file);
-    globals::g_player->Cx = globals::g_level->startCX;
-    globals::g_player->lvlStartCX = globals::g_level->startCX;
-    globals::g_player->Cy = globals::g_level->startCY;
-    globals::g_player->lvlStartCY = globals::g_level->startCY;
-    globals::g_player->setX(float(globals::g_level->startX * 64));
-    globals::g_player->setY(float(globals::g_level->startY * 64));
-    globals::g_player->lvlStartX = globals::g_level->startX * 64;
-    globals::g_player->lvlStartY = globals::g_level->startY * 64;
-    if (!globals::g_debug) globals::g_player->canMousebox = globals::g_level->startRune;
-    if (!globals::g_debug) (globals::g_player->canMousebox) ? globals::g_mousebox->show() : globals::g_mousebox->hide();
-    globals::g_player->lvl += 1;
-    return retur;
 }
 
 void pressed(WPARAM key)
@@ -274,6 +327,9 @@ void depressed(WPARAM key)
     }
 }
 
+unsigned long long fpsTimer = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+unsigned int times = 0;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     wnd = hWnd;
@@ -315,6 +371,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         mouseDowntxt->text = "Mouse Down: True";
         switch(globals::curScreen) 
         {
+        case 0:
+            if (globals::NewGame->active && globals::NewGame->Touching(globals::g_mouseX, globals::g_mouseY))
+            {
+                globals::NewGame->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+            }
+            if (globals::Continue->active && globals::Continue->Touching(globals::g_mouseX, globals::g_mouseY))
+            {
+                globals::Continue->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+            }
+            if (globals::Options0->active && globals::Options0->Touching(globals::g_mouseX, globals::g_mouseY))
+            {
+                globals::Options0->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+            }
+            if (globals::End->active && globals::End->Touching(globals::g_mouseX, globals::g_mouseY))
+            {
+                globals::End->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+            }
+            break;
         case 2:
             if (globals::Resume->active && globals::Resume->Touching(globals::g_mouseX, globals::g_mouseY))
             {
@@ -401,13 +479,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (wParam)
         {
         case 1:
-            unsigned long long lasttime = globals::timeNow;
             globals::timeNow = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            globals::g_fps = 1000.0 / (double)(globals::timeNow - lasttime);
-            fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
             timetxt->text = "Time Now: " + std::to_string(globals::timeNow);
+            if (globals::timeNow - fpsTimer >= 1000)
+            {
+                fpsTimer += 1000;
+                globals::g_fps = times;
+                fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
+                times = 1;
+            }
+            else {
+                times++;
+            }
             switch(globals::curScreen )
             {
+            case 0:
+            case 1:
             case 2:
                 InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
                 break;

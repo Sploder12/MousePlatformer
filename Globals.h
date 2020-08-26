@@ -10,6 +10,11 @@ public:
 
 	static unsigned int curScreen;
 
+	static Button* NewGame;
+	static Button* Continue;
+	static Button* Options0;
+	static Button* End;
+
 	static Button* Resume;
 	static Button* Options;
 	static Button* Exit;
@@ -28,5 +33,5 @@ public:
 	static std::map<WPARAM, bool> g_modKeys;
 
 	static unsigned int refreshRate;
-	static double g_fps;
+	static unsigned int g_fps;
 };

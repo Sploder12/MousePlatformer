@@ -6,7 +6,7 @@
 struct screenObject
 {
 	RECT rect = RECT();
-	COLORREF color = RGB(255,255,255);
+	COLORREF color = RGB(255, 255, 255);
 	std::string text;
 	bool active = true;
 	bool visible = true;
@@ -15,7 +15,7 @@ struct screenObject
 
 	bool debug = false;
 
-	screenObject(RECT rect, COLORREF color, std::string txt, unsigned int txtFlag = 1, bool debug = false):
+	screenObject(RECT rect, COLORREF color, std::string txt, unsigned int txtFlag = 1, bool debug = false) :
 		rect(rect), color(color), text(txt), txtFlag(txtFlag), debug(debug) {}
 
 	BOOLEAN Touching(long mx, long my)
@@ -33,35 +33,31 @@ struct screenObject
 
 	virtual void press(int n) = 0;
 
-	virtual void hide() = 0;
-
-	virtual void show() = 0;
-
-	virtual COLORREF draw(HDC * hdc, long mousX = 0, long mouseY = 0, bool mouseDown = false) = 0;
-};
-
-struct Button: public screenObject
-{
-	void(*onPress)(int);
-
-	Button(RECT rect, COLORREF color, void(*function)(int), std::string txt = "", unsigned int txtFlag = 1, bool debug = false) :
-		screenObject(rect, color, txt, txtFlag, debug), onPress(function) {}
-	
-	void screenObject::press(int n)
-	{
-		(this->onPress)(n);
-	}
-
-	void screenObject::hide()
+	void hide()
 	{
 		this->active = false;
 		this->visible = false;
 	}
 
-	void screenObject::show()
+	void show()
 	{
 		this->active = true;
 		this->visible = true;
+	}
+
+	virtual COLORREF draw(HDC* hdc, long mousX = 0, long mouseY = 0, bool mouseDown = false) = 0;
+};
+
+struct Button : public screenObject
+{
+	void(*onPress)(int);
+
+	Button(RECT rect, COLORREF color, void(*function)(int), std::string txt = "", unsigned int txtFlag = 1, bool debug = false) :
+		screenObject(rect, color, txt, txtFlag, debug), onPress(function) {}
+
+	void screenObject::press(int n)
+	{
+		(this->onPress)(n);
 	}
 
 	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
@@ -102,25 +98,13 @@ struct Button: public screenObject
 	}
 };
 
-struct Text: public screenObject 
+struct Text : public screenObject
 {
 	Text(RECT rect, COLORREF color, std::string txt, unsigned int txtFlag = 1, bool debug = false) :
 		screenObject(rect, color, txt, txtFlag, debug) {}
 
 	void screenObject::press(int n = 0)
 	{
-	}
-
-	void screenObject::hide()
-	{
-		this->active = false;
-		this->visible = false;
-	}
-
-	void screenObject::show()
-	{
-		this->active = true;
-		this->visible = true;
 	}
 
 	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
@@ -138,18 +122,6 @@ struct Image : public screenObject
 
 	void screenObject::press(int n = 0)
 	{
-	}
-
-	void screenObject::hide()
-	{
-		this->active = false;
-		this->visible = false;
-	}
-
-	void screenObject::show()
-	{
-		this->active = true;
-		this->visible = true;
 	}
 
 	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
@@ -178,7 +150,7 @@ struct tileSet
 	unsigned int th;
 
 	tileSet(HANDLE img, unsigned int tw, unsigned int th) :
-	source(img), tw(tw), th(th){}
+		source(img), tw(tw), th(th) {}
 
 	void draw(HDC* hdc, int x, int y, unsigned int tx, unsigned int ty)
 	{
@@ -203,7 +175,7 @@ struct tile
 	tileSet* tiles;
 	unsigned char tx;
 	unsigned char ty;
-	
+
 	int imgXOff = 0;
 	int imgYOff = 0;
 	int hitXOff = 0;
@@ -226,9 +198,9 @@ struct tile
 	tile(tileSet* tileS, unsigned char tx, unsigned char ty, bool solid = true, float friction = 0.1f, bool killer = false) :
 		tiles(tileS), tx(tx), ty(ty), solid(solid), friction(friction), killer(killer) {}
 
-	void draw(HDC * hdc, int x, int y)
+	void draw(HDC* hdc, int x, int y)
 	{
-		tiles->draw(hdc, x+this->imgXOff, y+this->imgYOff, this->tx, this->ty);
+		tiles->draw(hdc, x + this->imgXOff, y + this->imgYOff, this->tx, this->ty);
 	}
 };
 
@@ -240,7 +212,7 @@ struct stage
 
 	stage()
 	{
-		exists = false;
+		this->data.reserve(108);
 	}
 
 	stage(std::string data, std::vector<tileSet*>* tileSets, unsigned short tilesetID)
@@ -251,7 +223,6 @@ struct stage
 	void loadStage(std::string data, std::vector<tileSet*>* tileSets, unsigned short tilesetID)
 	{
 		std::string temp = "";
-		this->data.reserve(108);
 		for (unsigned int i = 0; i < 108; i++)
 		{
 			temp = "";
@@ -261,7 +232,7 @@ struct stage
 			bool solid = (tileID > 10);
 			float friction = (tileID > 32 && tileID < 44) ? 0.02f : 0.3f; //for slippery blocks
 			bool killer = (tileID > 21 && tileID < 33) ? true : false;
-			this->data.emplace_back(new tile(tileSets->at(tilesetID-1), tileID%11, (unsigned int)floor(tileID/11), solid, friction, killer));
+			this->data.emplace_back(new tile(tileSets->at(tilesetID - 1), tileID % 11, (unsigned int)floor(tileID / 11), solid, friction, killer));
 		}
 		exists = true;
 	}
@@ -276,7 +247,7 @@ struct stage
 			}
 		}
 	}
-	
+
 	~stage()
 	{
 		size_t size = this->data.size();
@@ -308,9 +279,9 @@ struct level : public screenObject
 	bool uninit = true;
 
 	std::vector<tileSet*>* tileSets;
-	
-	level(std::string file, std::vector<tileSet*>* tileSet):
-	screenObject(rect, RGB(0,0,0), ""), tileSets(tileSet)
+
+	level(std::string file, std::vector<tileSet*>* tileSet) :
+		screenObject(rect, RGB(0, 0, 0), ""), tileSets(tileSet)
 	{
 		if (!loadLevel(file))
 			delete this;
@@ -318,11 +289,13 @@ struct level : public screenObject
 
 	bool loadLevel(std::string file)
 	{
-		if(lw != 0 && lh != 0)
+		if (lw != 0 && lh != 0)
 		{
 			delete[] foreground;
 			delete[] background;
 			this->uninit = true;
+			lw = 0;
+			lh = 0;
 		}
 		std::fstream lvlDat;
 		lvlDat.open(file, std::ios::in);
@@ -379,7 +352,7 @@ struct level : public screenObject
 							endS = std::stoi(temp);
 							break;
 						case 9:
-							startRune = (temp.at(0) == 'T')?true : false;
+							startRune = (temp.at(0) == 'T') ? true : false;
 							break;
 						}
 					}
@@ -416,10 +389,10 @@ struct level : public screenObject
 					break;
 				case 4: //tileMods
 					unsigned char tileModindex;
-					temp = dat.substr(1, dat.find_first_of('(')-1);
+					temp = dat.substr(1, dat.find_first_of('(') - 1);
 					tileModindex = std::stoi(temp);
 					end = unsigned int(dat.find_first_of(')'));
-					temp = dat.substr(dat.find_first_of('(')+1,end - (dat.find_first_of('(') + 1));
+					temp = dat.substr(dat.find_first_of('(') + 1, end - (dat.find_first_of('(') + 1));
 					switch (temp.at(0))
 					{
 					case 's':
@@ -449,7 +422,7 @@ struct level : public screenObject
 						foreground[stag].data.at(tileModindex)->friction = std::stof(temp.substr(2));
 						break;
 					}
-				
+
 					break;
 				case 5: //bgstart
 					temp = "";
@@ -465,7 +438,7 @@ struct level : public screenObject
 				default:
 					return false;
 				}
-				if (uninit) 
+				if (uninit)
 				{
 					uninit = false;
 					stage* fGrnd = new stage[lw * lh];
@@ -484,22 +457,10 @@ struct level : public screenObject
 	{
 	}
 
-	void screenObject::hide()
-	{
-		this->active = false;
-		this->visible = false;
-	}
-
-	void screenObject::show()
-	{
-		this->active = true;
-		this->visible = true;
-	}
-
 	COLORREF screenObject::draw(HDC* hdc, long playerCX, long playerCY, bool mouseDown)
 	{
 		background[(playerCX)+(playerCY * lw)].draw(hdc);
-		foreground[(playerCX)+(playerCY*lw)].draw(hdc);
+		foreground[(playerCX)+(playerCY * lw)].draw(hdc);
 		return this->color;
 	}
 
@@ -507,6 +468,7 @@ struct level : public screenObject
 	{
 		delete[] foreground;
 		delete[] background;
+		this->uninit = true;
 	}
 };
 
@@ -515,7 +477,7 @@ struct level : public screenObject
 #define AIRFRIC 0.1f
 #define GRAVITY 0.5f
 
-struct player : screenObject
+struct player : public screenObject
 {
 	unsigned char Cx;
 	unsigned char Cy;
@@ -545,14 +507,38 @@ struct player : screenObject
 	unsigned char lvlStartCX = 1;
 	unsigned char lvlStartCY = 1;
 
-	player(RECT xy, HANDLE sprite, level* lvl, HWND* wnd, std::string loadDat = "") :
+	player(RECT xy, HANDLE sprite, level* lvl, HWND* wnd) :
 		screenObject(xy, RGB(255, 255, 255), ""), sprite(sprite), lvlptr(lvl), wnd(wnd)
 	{
-		if (loadDat != "") loadPlayer(loadDat);
+		//load();
 	}
 
-	void loadPlayer(std::string data)
+	bool save()
 	{
+		std::ofstream file;
+		file.open("player.dt");
+		if (file.is_open())
+		{
+			file << "LVL:" + std::to_string(this->lvl);
+			file.close();
+			return true;
+		}
+		return false;
+	}
+
+	bool load()
+	{
+		std::ifstream file;
+		file.open("player.dt");
+		if (file.is_open())
+		{
+			std::string tmp;
+			std::getline(file, tmp);
+			this->lvl = std::stoi(tmp.substr(4));
+			file.close();
+			return true;
+		}
+		return false;
 	}
 
 	void moveX(float x)
@@ -650,8 +636,8 @@ struct player : screenObject
 	{
 		float expectedX = this->rect.left + this->xvel;
 		unsigned char Cy = (this->rect.top < 0) ? 0 : unsigned char(round(this->rect.top / 64));
-		unsigned char start = (Cy > 0) ? ((Cy - 1) * 12): 0;
-		unsigned char end = (Cy < 8) ? ((Cy + 2) * 12): 108;
+		unsigned char start = (Cy > 0) ? ((Cy - 1) * 12) : 0;
+		unsigned char end = (Cy < 8) ? ((Cy + 2) * 12) : 108;
 		for (unsigned char i = start; i < end; i++)
 		{
 			tile* curTile = stage->data.at(i);
@@ -786,11 +772,17 @@ struct player : screenObject
 		{
 			if (this->xvel > -MAXXVEL)
 				this->xvel -= this->xaccel;
+
+			if (this->xvel > 0)
+				this->xvel += (0.01f / this->curFriction);
 		}
 		else if (this->movementKeys.at(0x44) && !this->movementKeys.at(0x41))
 		{
 			if (this->xvel < MAXXVEL)
 				this->xvel += this->xaccel;
+
+			if (this->xvel < 0)
+				this->xvel -= (0.01f / this->curFriction);
 		}
 		else if (this->xvel != 0.0f)
 		{
@@ -844,21 +836,8 @@ struct player : screenObject
 		}
 	}
 
-
 	void screenObject::press(int n = 0)
 	{
-	}
-
-	void screenObject::hide()
-	{
-		this->active = false;
-		this->visible = false;
-	}
-
-	void screenObject::show()
-	{
-		this->active = true;
-		this->visible = true;
 	}
 
 	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
@@ -872,10 +851,5 @@ struct player : screenObject
 		DeleteDC(hdcMem);
 		DeleteObject(hbmOld);
 		return this->color;
-	}
-
-	void save()
-	{
-
 	}
 };
