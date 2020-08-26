@@ -1,4 +1,4 @@
-  #include "Globals.h"
+#include "Globals.h"
 
 bool globals::g_debug = true;
 

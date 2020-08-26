@@ -15,7 +15,7 @@ struct screenObject
 
 	bool debug = false;
 
-	screenObject(RECT rect, COLORREF color, std::string txt, unsigned int txtFlag = 1, bool debug = false) :
+	screenObject(RECT rect, COLORREF color, std::string txt, unsigned int txtFlag = 1, bool debug = false):
 		rect(rect), color(color), text(txt), txtFlag(txtFlag), debug(debug) {}
 
 	BOOLEAN Touching(long mx, long my)
