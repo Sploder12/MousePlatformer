@@ -81,13 +81,22 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-void resume(int n) { globals::curScreen = 3; }
+void resume(int n) 
+{
+    globals::prevScreen = globals::curScreen;
+    globals::curScreen = 3;
+}
 
-void options(int n) { globals::curScreen = 1; }
+void options(int n) 
+{
+    globals::prevScreen = globals::curScreen;
+    globals::curScreen = 1; 
+}
 
 void quit(int n)
 {
     //delete globals::g_level;
+    globals::prevScreen = globals::curScreen;
     globals::curScreen = 0;
     globals::g_player->lvl -= 1;
     globals::g_player->save();
@@ -141,18 +150,21 @@ void startN(int n)
     globals::g_player->yvel = 0.0f;
     globals::g_player->lvl = 1;
     loadLevel("level1.txt");
+    globals::prevScreen = globals::curScreen;
     globals::curScreen = 3;
 }
 
 void cont(int n)
 {
-    globals::g_player->xvel = 0.0f;
-    globals::g_player->yvel = 0.0f;
     if (globals::g_player->load())
+    {
+        globals::g_player->xvel = 0.0f;
+        globals::g_player->yvel = 0.0f;
         loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+        globals::prevScreen = globals::curScreen;
+        globals::curScreen = 3;
+    }
     else startN(0);
-
-    globals::curScreen = 3;
 }
 
 void end(int n)
@@ -198,6 +210,7 @@ void buildScreenObjects()
     tilesets.reserve(1);
     tileset->source = TSimg;
     tilesets.push_back(tileset);
+
     lvl = new level("level1.txt", &tilesets);
     globals::g_level = lvl;
 
@@ -273,8 +286,7 @@ void pressed(WPARAM key)
         {
             if (globals::curScreen == 1)
             {
-                if (globals::g_level->foreground[0].exists) globals::curScreen = 3;
-                else globals::curScreen = 0;
+                globals::curScreen = globals::prevScreen;
             }
             else
             {

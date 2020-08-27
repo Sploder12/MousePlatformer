@@ -9,6 +9,7 @@ public:
 	static bool g_debug;
 
 	static unsigned int curScreen;
+	static unsigned int prevScreen;
 
 	static Button* NewGame;
 	static Button* Continue;
