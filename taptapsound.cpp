@@ -137,6 +137,8 @@ Image* mousebox = new Image(createRECT(0, 0, 64, 64), mouseSpriteU);
 
 void startN(int n)
 {
+    globals::g_player->xvel = 0.0f;
+    globals::g_player->yvel = 0.0f;
     globals::g_player->lvl = 1;
     loadLevel("level1.txt");
     globals::curScreen = 3;
@@ -144,6 +146,8 @@ void startN(int n)
 
 void cont(int n)
 {
+    globals::g_player->xvel = 0.0f;
+    globals::g_player->yvel = 0.0f;
     if (globals::g_player->load())
         loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
     else startN(0);
