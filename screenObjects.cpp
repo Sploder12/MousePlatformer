@@ -146,11 +146,12 @@ struct Image : public screenObject
 struct tileSet
 {
 	HANDLE source = NULL;
+	HANDLE sourceMask = NULL;
 	unsigned int tw;
 	unsigned int th;
 
-	tileSet(HANDLE img, unsigned int tw, unsigned int th) :
-		source(img), tw(tw), th(th) {}
+	tileSet(HANDLE img, HANDLE imgMask, unsigned int tw, unsigned int th) :
+		source(img), sourceMask(imgMask), tw(tw), th(th) {}
 
 	void draw(HDC* hdc, int x, int y, unsigned int tx, unsigned int ty)
 	{
@@ -158,8 +159,21 @@ struct tileSet
 		HDC hdcMem = CreateCompatibleDC(*hdc);
 		HGDIOBJ hbmOld = SelectObject(hdcMem, source);
 		GetObject(source, sizeof(bm), &bm);
-		BitBlt(*hdc, x, y, tw, th, hdcMem, tx * tw, ty * th, SRCCOPY);
-		SelectObject(hdcMem, hbmOld);
+
+		if (ty >= 2 || tx >= 4)
+		{
+			SelectObject(hdcMem, this->sourceMask);
+			BitBlt(*hdc, x, y, tw, th, hdcMem, tx * tw, ty * th, SRCAND);
+
+			SelectObject(hdcMem, this->source);
+			BitBlt(*hdc, x, y, tw, th, hdcMem, tx * tw, ty * th, SRCPAINT);
+		}
+		else
+		{
+			SelectObject(hdcMem, this->source);
+			BitBlt(*hdc, x, y, tw, th, hdcMem, tx * tw, ty * th, SRCCOPY);
+		}
+
 		DeleteDC(hdcMem);
 		DeleteObject(hbmOld);
 	}
@@ -265,6 +279,7 @@ struct level : public screenObject
 {
 	stage* foreground = nullptr; //THESE ARE POINTERS TO ARRAYS
 	stage* background = nullptr;
+	unsigned int varienceFactor = 1;
 	unsigned char lw = 0; //width of level (in stages)
 	unsigned char lh = 0; //height of level (in stages)
 	unsigned char startCX;
@@ -483,6 +498,7 @@ struct player : public screenObject
 	unsigned char Cy;
 
 	HANDLE sprite;
+	HANDLE spriteMask;
 
 	level* lvlptr = nullptr;
 	HWND* wnd = nullptr;
@@ -507,8 +523,8 @@ struct player : public screenObject
 	unsigned char lvlStartCX = 1;
 	unsigned char lvlStartCY = 1;
 
-	player(RECT xy, HANDLE sprite, level* lvl, HWND* wnd) :
-		screenObject(xy, RGB(255, 255, 255), ""), sprite(sprite), lvlptr(lvl), wnd(wnd)
+	player(RECT xy, HANDLE sprite, HANDLE spriteMask,level* lvl, HWND* wnd) :
+		screenObject(xy, RGB(255, 255, 255), ""), sprite(sprite), spriteMask(spriteMask), lvlptr(lvl), wnd(wnd)
 	{
 		//load();
 	}
@@ -846,8 +862,13 @@ struct player : public screenObject
 		HDC hdcMem = CreateCompatibleDC(*hdc);
 		HGDIOBJ hbmOld = SelectObject(hdcMem, sprite);
 		GetObject(sprite, sizeof(bm), &bm);
-		BitBlt(*hdc, rect.left, rect.top, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCCOPY);
-		SelectObject(hdcMem, hbmOld);
+
+		SelectObject(hdcMem, this->spriteMask);
+		BitBlt(*hdc, rect.left, rect.top, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCAND);
+
+		SelectObject(hdcMem, this->sprite);
+		BitBlt(*hdc, rect.left, rect.top, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCPAINT);
+
 		DeleteDC(hdcMem);
 		DeleteObject(hbmOld);
 		return this->color;

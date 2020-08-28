@@ -42,11 +42,9 @@ void pnt(HWND hWnd, RECT* region)
 	PAINTSTRUCT ps;
 
 	HDC hdc = BeginPaint(hWnd, &ps);
-	int width = GetDeviceCaps(hdc, HORZSIZE)*4;
-	int height = GetDeviceCaps(hdc, VERTSIZE)*3;
 
 	HDC buffer = CreateCompatibleDC(hdc);
-	HBITMAP buffermap = CreateCompatibleBitmap(hdc, width, height);
+	HBITMAP buffermap = CreateCompatibleBitmap(hdc, 784, 615);
 	SelectObject(buffer, buffermap);
 
 	FillRect(buffer, &ps.rcPaint, bg);
@@ -130,7 +128,7 @@ void pnt(HWND hWnd, RECT* region)
 		}
 		break;
 	}
-	BitBlt(hdc, 0, 0, width, height, buffer, 0, 0, SRCCOPY);
+	BitBlt(hdc, 0, 0, 784, 615, buffer, 0, 0, SRCCOPY);
 	DeleteDC(buffer);
 	DeleteDC(hdc);
 	DeleteObject(buffermap);

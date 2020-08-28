@@ -13,7 +13,9 @@ WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
 HBITMAP TSimg;
+HBITMAP TSmask;
 HBITMAP playerSprite;
+HBITMAP playerMask;
 
 HBITMAP mouseSpriteU;
 HBITMAP mouseSpriteA;
@@ -48,7 +50,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg;
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (GetMessage(&msg, nullptr, 0x0002, 0x0202))
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
         {
@@ -79,6 +81,43 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
     return RegisterClassExW(&wcex);
+}
+
+HBITMAP CreateBitmapMask(HBITMAP hbmColour, COLORREF crTransparent)
+{
+    HDC hdcMem, hdcMem2;
+    HBITMAP hbmMask;
+    BITMAP bm;
+
+    // Create monochrome (1 bit) mask bitmap.  
+    GetObject(hbmColour, sizeof(BITMAP), &bm);
+    hbmMask = CreateBitmap(bm.bmWidth, bm.bmHeight, 1, 1, NULL);
+
+    // Get some HDCs that are compatible with the display driver
+    hdcMem = CreateCompatibleDC(0);
+    hdcMem2 = CreateCompatibleDC(0);
+
+    SelectBitmap(hdcMem, hbmColour);
+    SelectBitmap(hdcMem2, hbmMask);
+
+    // Set the background colour of the colour image to the colour
+    // you want to be transparent.
+    SetBkColor(hdcMem, crTransparent);
+
+    // Copy the bits from the colour image to the B+W mask... everything
+    // with the background colour ends up white while everythig else ends up
+    // black...Just what we wanted.
+    BitBlt(hdcMem2, 0, 0, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCCOPY);
+
+    // Take our new mask and use it to turn the transparent colour in our
+    // original colour image to black so the transparency effect will
+    // work right.
+    BitBlt(hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, hdcMem2, 0, 0, SRCINVERT);
+
+    DeleteDC(hdcMem);
+    DeleteDC(hdcMem2);
+
+    return hbmMask;
 }
 
 void resume(int n) 
@@ -121,7 +160,7 @@ bool loadLevel(std::string file)
     return retur;
 }
 
-tileSet* tileset = new tileSet(TSimg, 64, 64);
+tileSet* tileset = new tileSet(TSimg, TSmask, 64, 64);
 std::vector<tileSet*> tilesets;
 level* lvl;;
 
@@ -209,12 +248,13 @@ void buildScreenObjects()
 
     tilesets.reserve(1);
     tileset->source = TSimg;
+    tileset->sourceMask = TSmask;
     tilesets.push_back(tileset);
 
     lvl = new level("level1.txt", &tilesets);
     globals::g_level = lvl;
 
-    globals::g_player = new player(createRECT(lvl->startX,lvl->startY,64,64), playerSprite, lvl, &wnd);
+    globals::g_player = new player(createRECT(lvl->startX,lvl->startY,64,64), playerSprite, playerMask, lvl, &wnd);
     globals::g_player->Cx = lvl->startCX;
     globals::g_player->Cy = lvl->startCY;
     globals::g_player->lvlStartCX = lvl->startCX;
@@ -264,7 +304,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    }
 
    TSimg = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_TILESET1));
+   TSmask = CreateBitmapMask(TSimg, RGB(0,0,1));
    playerSprite = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_PLAYER1));
+   playerMask = CreateBitmapMask(playerSprite, RGB(0, 0, 1));
    mouseSpriteU = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICK1));
    mouseSpriteA = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICKA));
    mouseSpriteB = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICKB));
