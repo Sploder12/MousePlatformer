@@ -20,6 +20,8 @@ public:
 	static Button* Options;
 	static Button* Exit;
 
+	static Button* ExitOps;
+
 	static std::vector<screenObject*> g_ScreenObjects;
 	static level* g_level;
 	static player* g_player;

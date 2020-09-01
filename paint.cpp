@@ -70,6 +70,12 @@ void pnt(HWND hWnd, RECT* region)
 		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
 		drawText(&buffer, globals::End->text, temprect, globals::End->txtFlag, tempCol);
 		break;
+	case 1:
+		tempCol = globals::ExitOps->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
+		temprect = globals::ExitOps->rect;
+		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
+		drawText(&buffer, globals::ExitOps->text, temprect, globals::ExitOps->txtFlag, tempCol);
+		break;
 	case 2:
 		tempCol = globals::Resume->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
 		temprect = globals::Resume->rect;

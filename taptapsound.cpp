@@ -12,6 +12,10 @@ HWND wnd;                                      // current window
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
+HBITMAP MMenu;
+HBITMAP Paused;
+HBITMAP Options;
+
 HBITMAP TSimg;
 HBITMAP TSmask;
 HBITMAP playerSprite;
@@ -177,9 +181,10 @@ Text* modtxt1 = new Text(createRECT(0, 75, 250, 18), RGB(255, 255, 255), "Shifti
 Text* modtxt2 = new Text(createRECT(0, 92, 250, 18), RGB(255, 255, 255), "Control: " + std::to_string(globals::g_modKeys.at(VK_CONTROL)), DT_LEFT, true);
 Text* modtxt3 = new Text(createRECT(0, 109, 250, 18), RGB(255, 255, 255), "Tab: " + std::to_string(globals::g_modKeys.at(VK_TAB)), DT_LEFT, true);
 
-Text* debugtxt = new Text(createRECT(0, 140, 250, 18), RGB(255, 255, 255), "Debug: " + std::to_string(globals::g_debug), DT_LEFT, true);
+Text* debugtxt = new Text(createRECT(0, 130, 250, 18), RGB(255, 255, 255), "Debug: " + std::to_string(globals::g_debug), DT_LEFT, true);
 
-Text* fpstxt = new Text(createRECT(0, 165, 250, 18), RGB(255, 255, 255), "FPS: " + std::to_string(globals::g_fps), DT_LEFT, true);
+Text* fpstxt = new Text(createRECT(0, 150, 250, 18), RGB(255, 255, 255), "FPS: " + std::to_string(globals::g_fps), DT_LEFT, true);
+Text* Afpstxt = new Text(createRECT(0, 168, 250, 18), RGB(255, 255, 255), "AFPS: " + std::to_string(globals::g_fps), DT_LEFT, true);
 
 Image* mousebox = new Image(createRECT(0, 0, 64, 64), mouseSpriteU);
 
@@ -217,6 +222,8 @@ void end(int n)
     delete globals::Options;
     delete globals::Exit;
 
+    delete globals::ExitOps;
+
     delete globals::g_player;
     if(!globals::g_level->uninit)delete globals::g_level;
 
@@ -235,16 +242,23 @@ void end(int n)
     exit(0);
 }
 
+void exitOptions(int i)
+{
+    globals::curScreen = globals::prevScreen;
+}
+
 void buildScreenObjects()
 {
-    globals::NewGame = new Button(createRECT(225, 0, 300, 100), RGB(70, 125, 150), &startN, "New Game");
-    globals::Continue = new Button(createRECT(225, 90, 300, 100), RGB(70, 125, 150), &cont, "Continue");
-    globals::Options0 = new Button(createRECT(225, 240, 300, 100), RGB(70, 125, 150), &options, "Options");
-    globals::End = new Button(createRECT(225, 390, 300, 100), RGB(70, 125, 150), &end, "Exit");
+    globals::NewGame = new Button(createRECT(225, 35, 300, 100), RGB(70, 125, 150), &startN, "New Game");
+    globals::Continue = new Button(createRECT(225, 165, 300, 100), RGB(70, 125, 150), &cont, "Continue");
+    globals::Options0 = new Button(createRECT(225, 295, 300, 100), RGB(70, 125, 150), &options, "Options");
+    globals::End = new Button(createRECT(225, 425, 300, 100), RGB(70, 125, 150), &end, "Exit");
     
     globals::Resume = new Button(createRECT(225, 90, 300, 100), RGB(70, 125, 150), &resume, "Resume");
     globals::Options = new Button(createRECT(225, 240, 300, 100), RGB(70, 125, 150), &options, "Options");
     globals::Exit = new Button(createRECT(225, 390, 300, 100), RGB(70, 125, 150), &quit, "Exit");
+
+    globals::ExitOps = new Button(createRECT(225, 390, 300, 100), RGB(70, 125, 150), &exitOptions, "Exit");
 
     tilesets.reserve(1);
     tileset->source = TSimg;
@@ -269,7 +283,7 @@ void buildScreenObjects()
 
     globals::g_mousebox = mousebox;
 
-    globals::g_ScreenObjects.reserve(12);
+    globals::g_ScreenObjects.reserve(13);
 
     globals::g_ScreenObjects.push_back(mouseXtxt);
     globals::g_ScreenObjects.push_back(mouseYtxt);
@@ -287,6 +301,7 @@ void buildScreenObjects()
     globals::g_ScreenObjects.push_back(debugtxt);
 
     globals::g_ScreenObjects.push_back(fpstxt);
+    globals::g_ScreenObjects.push_back(Afpstxt);
 
     globals::g_ScreenObjects.push_back(globals::g_mousebox);
 }
@@ -302,6 +317,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    {
       return FALSE;
    }
+
+   //MMenu = LoadBitmap(hInst, MAKEINTRESOURCE(@TODO));
+   //Paused = LoadBitmap(hInst, MAKEINTRESOURCE(@TODO));
+   //Options = LoadBitmap(hInst, MAKEINTRESOURCE(@TODO));
 
    TSimg = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_TILESET1));
    TSmask = CreateBitmapMask(TSimg, RGB(0,0,1));
@@ -328,7 +347,7 @@ void pressed(WPARAM key)
         {
             if (globals::curScreen == 1)
             {
-                globals::curScreen = globals::prevScreen;
+                exitOptions(0);
             }
             else
             {
@@ -387,6 +406,7 @@ void depressed(WPARAM key)
 
 unsigned long long fpsTimer = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 unsigned int times = 0;
+unsigned int Atimes = 0;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -411,6 +431,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         RECT temp;
         GetUpdateRect(hWnd, &temp, true);
         pnt(hWnd, &temp);
+        Atimes++;
         }
         break;
     case WM_ERASEBKGND:
@@ -418,8 +439,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_MOUSEMOVE:
         globals::g_mouseX = GET_X_LPARAM(lParam);
         globals::g_mouseY = GET_Y_LPARAM(lParam);
-        mouseXtxt->text = "Mouse X: " + std::to_string(globals::g_mouseX);
-        mouseYtxt->text = "Mouse Y: " + std::to_string(globals::g_mouseY);
+        if (globals::g_debug)
+        {
+            mouseXtxt->text = "Mouse X: " + std::to_string(globals::g_mouseX);
+            mouseYtxt->text = "Mouse Y: " + std::to_string(globals::g_mouseY);
+        }
+
         if(globals::curScreen == 3)
             if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top+32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
                 if (globals::g_modKeys.at(VK_SHIFT) || globals::g_mouseDown) globals::g_player->mousebox = true;
@@ -448,6 +473,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (globals::End->active && globals::End->Touching(globals::g_mouseX, globals::g_mouseY))
             {
                 globals::End->press(0);
+                InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
+            }
+            break;
+        case 1:
+            if (globals::ExitOps->active && globals::ExitOps->Touching(globals::g_mouseX, globals::g_mouseY))
+            {
+                globals::ExitOps->press(0);
                 InvalidateRect(hWnd, &createRECT(0, 0, SWIDTH, SHEIGHT), true);
             }
             break;
@@ -508,9 +540,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         default:
             pressed(wParam);
         }
-        modtxt1->text = "Shifting: " + std::to_string(globals::g_modKeys.at(VK_SHIFT));
-        modtxt2->text = "Control: " + std::to_string(globals::g_modKeys.at(VK_CONTROL));
-        modtxt3->text = "Tab: " + std::to_string(globals::g_modKeys.at(VK_TAB));
+        if (globals::g_debug)
+        {
+            modtxt1->text = "Shifting: " + std::to_string(globals::g_modKeys.at(VK_SHIFT));
+            modtxt2->text = "Control: " + std::to_string(globals::g_modKeys.at(VK_CONTROL));
+            modtxt3->text = "Tab: " + std::to_string(globals::g_modKeys.at(VK_TAB));
+        }
         break;
     case WM_KEYUP:
         switch (wParam)
@@ -529,22 +564,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         default:
             depressed(wParam);
         }
-        modtxt1->text = "Shifting: " + std::to_string(globals::g_modKeys.at(VK_SHIFT));
-        modtxt2->text = "Control: " + std::to_string(globals::g_modKeys.at(VK_CONTROL));
-        modtxt3->text = "Tab: " + std::to_string(globals::g_modKeys.at(VK_TAB));
+        if (globals::g_debug)
+        {
+            modtxt1->text = "Shifting: " + std::to_string(globals::g_modKeys.at(VK_SHIFT));
+            modtxt2->text = "Control: " + std::to_string(globals::g_modKeys.at(VK_CONTROL));
+            modtxt3->text = "Tab: " + std::to_string(globals::g_modKeys.at(VK_TAB));
+        }
         break;
     case WM_TIMER:
         switch (wParam)
         {
         case 1:
             globals::timeNow = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            timetxt->text = "Time Now: " + std::to_string(globals::timeNow);
+            if(globals::g_debug) timetxt->text = "Time Now: " + std::to_string(globals::timeNow);
             if (globals::timeNow - fpsTimer >= 1000)
             {
                 fpsTimer += 1000;
                 globals::g_fps = times;
-                fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
+                if (globals::g_debug) 
+                {
+                    fpstxt->text = "FPS: " + std::to_string(globals::g_fps);
+                    Afpstxt->text = "AFPS: " + std::to_string(Atimes);
+                }
                 times = 1;
+                Atimes = 0;
             }
             else {
                 times++;

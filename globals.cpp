@@ -16,6 +16,9 @@ Button* globals::Resume;
 Button* globals::Options;
 Button* globals::Exit;
 
+//option buttons
+Button* globals::ExitOps;
+
 std::vector<screenObject*> globals::g_ScreenObjects;
 level* globals::g_level;
 player* globals::g_player;

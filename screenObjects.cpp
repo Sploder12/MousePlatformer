@@ -98,6 +98,68 @@ struct Button : public screenObject
 	}
 };
 
+struct CheckBox : public screenObject
+{
+	bool* valPtr;
+
+	CheckBox(RECT rect, COLORREF color, bool * valPtr, std::string txt = "", unsigned int txtFlag = 1, bool debug = false) :
+		screenObject(rect, color, txt, txtFlag, debug), valPtr(valPtr) {}
+
+	void screenObject::press(int n)
+	{
+		*this->valPtr = !*(this->valPtr);
+	}
+
+	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
+	{
+		COLORREF tempcolor = this->color;
+		HBRUSH brush = NULL;
+		if (this->active)
+		{
+			if (this->Touching(mousX, mouseY))
+			{
+				if (mouseDown)
+				{
+					tempcolor = RGB(GetRValue(this->color) - 20, GetGValue(this->color) - 20, GetBValue(this->color) - 20);
+					brush = CreateSolidBrush(tempcolor);
+					if (*this->valPtr)
+						FillRect(*hdc, &this->rect, brush);
+					else
+						FrameRect(*hdc, &this->rect, brush);
+				}
+				else
+				{
+					tempcolor = RGB(GetRValue(this->color) + 15, GetGValue(this->color) + 15, GetBValue(this->color) + 15);
+					brush = CreateSolidBrush(tempcolor);
+					if (*this->valPtr)
+						FillRect(*hdc, &this->rect, brush);
+					else
+						FrameRect(*hdc, &this->rect, brush);
+				}
+			}
+			else
+			{
+				brush = CreateSolidBrush(this->color);
+				if (*this->valPtr)
+					FillRect(*hdc, &this->rect, brush);
+				else
+					FrameRect(*hdc, &this->rect, brush);
+			}
+		}
+		else
+		{
+			tempcolor = RGB(GetRValue(this->color) - 25, GetGValue(this->color) - 25, GetBValue(this->color) - 25);
+			brush = CreateSolidBrush(tempcolor);
+			if (*this->valPtr)
+				FillRect(*hdc, &this->rect, brush);
+			else
+				FrameRect(*hdc, &this->rect, brush);
+		}
+		DeleteObject(brush);
+		return tempcolor;
+	}
+};
+
 struct Text : public screenObject
 {
 	Text(RECT rect, COLORREF color, std::string txt, unsigned int txtFlag = 1, bool debug = false) :
@@ -279,7 +341,6 @@ struct level : public screenObject
 {
 	stage* foreground = nullptr; //THESE ARE POINTERS TO ARRAYS
 	stage* background = nullptr;
-	unsigned int varienceFactor = 1;
 	unsigned char lw = 0; //width of level (in stages)
 	unsigned char lh = 0; //height of level (in stages)
 	unsigned char startCX;
@@ -535,7 +596,7 @@ struct player : public screenObject
 		file.open("player.dt");
 		if (file.is_open())
 		{
-			file << "LVL:" + std::to_string(this->lvl);
+			file << "LVL:" << this->lvl;
 			file.close();
 			return true;
 		}
