@@ -1,6 +1,6 @@
 #pragma once
 #include <Windows.h>
-#include "Globals.h"
+#include "LEglobals.h"
 #include <string>
 
 RECT createRECT(int left, int top, int width, int height);

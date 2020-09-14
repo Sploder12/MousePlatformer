@@ -1,25 +1,26 @@
 #include "paint.h"
 
-#define BGCOLOR RGB(28, 48, 68)
+#define BGCOLOR RGB(195, 195, 195)
 HBRUSH bg = CreateSolidBrush(BGCOLOR);
+
+
 
 RECT createRECT(int left, int top, int width, int height)
 {
 	RECT rect = RECT();
 	rect.left = left;
 	rect.top = top;
-	rect.right = width+left;
-	rect.bottom = height+top;
+	rect.right = width + left;
+	rect.bottom = height + top;
 	return rect;
 }
 
-void drawText(HDC* hdc, std::string txt, RECT rect, unsigned int flag, COLORREF bgcol)
+void drawText(HDC* hdc, std::wstring txt, RECT rect, unsigned int flag, COLORREF bgcol)
 {
 	COLORREF oldBGcol = GetBkColor(*hdc);
 	if (bgcol == NULL)
 		bgcol = oldBGcol;
-	std::wstring stemp = std::wstring(txt.begin(), txt.end());
-	LPCWSTR sw = stemp.c_str();
+	LPCWSTR sw = txt.c_str();
 	SetBkColor(*hdc, bgcol);
 	DrawText(*hdc, sw, -1, &rect, flag);
 	SetBkColor(*hdc, oldBGcol);
@@ -42,103 +43,68 @@ void pnt(HWND hWnd, RECT* region)
 	PAINTSTRUCT ps;
 
 	HDC hdc = BeginPaint(hWnd, &ps);
-
+	
 	HDC buffer = CreateCompatibleDC(hdc);
-	HBITMAP buffermap = CreateCompatibleBitmap(hdc, 784, 615);
+	HBITMAP buffermap = CreateCompatibleBitmap(hdc, 784, 752);
 	SelectObject(buffer, buffermap);
 
-	FillRect(buffer, &ps.rcPaint, bg);
-	COLORREF tempCol;
-	RECT temprect;
-	switch (globals::curScreen)
-	{
-	case 0:
-		tempCol = globals::NewGame->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::NewGame->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::NewGame->text, temprect, globals::NewGame->txtFlag, tempCol);
-		tempCol = globals::Continue->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::Continue->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::Continue->text, temprect, globals::Continue->txtFlag, tempCol);
-		tempCol = globals::Options0->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::Options0->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::Options0->text, temprect, globals::Options0->txtFlag, tempCol);
-		tempCol = globals::End->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::End->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::End->text, temprect, globals::End->txtFlag, tempCol);
-		break;
-	case 1:
-		tempCol = globals::ExitOps->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::ExitOps->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::ExitOps->text, temprect, globals::ExitOps->txtFlag, tempCol);
-		break;
-	case 2:
-		tempCol = globals::Resume->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::Resume->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::Resume->text, temprect, globals::Resume->txtFlag, tempCol);
-		tempCol = globals::Options->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::Options->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::Options->text, temprect, globals::Options->txtFlag, tempCol);
-		tempCol = globals::Exit->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-		temprect = globals::Exit->rect;
-		temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-		drawText(&buffer, globals::Exit->text, temprect, globals::Exit->txtFlag, tempCol);
-		break;
-	case 3:
-		stage* background = globals::g_level->background;
-		stage* foreground = globals::g_level->foreground;
-		std::vector<tile*>* dat = &background[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].data;
-		if (background[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].exists) {
-			for (unsigned char i = 0; i < 108; i++)
-			{
-				temprect = createRECT((i % 12) * 64, int(floor(i / 12)) * 64, 64, 64);
-				if (intersecting(temprect, *region)) dat->at(i)->draw(&buffer, temprect.left, temprect.top);
-			}
-		}
-		dat = &foreground[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].data;
-		if (foreground[(globals::g_player->Cx) + (globals::g_player->Cy * globals::g_level->lw)].exists) {
-			for (unsigned char i = 0; i < 108; i++)
-			{
-				temprect = createRECT((i % 12) * 64, int(floor(i / 12)) * 64, 64, 64);
-				if (intersecting(temprect, *region)) dat->at(i)->draw(&buffer, temprect.left, temprect.top);
-			}
-		}
+	if (intersecting(*region, createRECT(0, 0, 768, 576))) {
+		unsigned short curStage = globals::curStageX + globals::curStageY * globals::g_level->lw;
+		if(globals::showBackground) globals::g_level->background[curStage].draw(&buffer, false);
+		if(globals::showForeground) globals::g_level->foreground[curStage].draw(&buffer, globals::showIcons);
 
-		if (intersecting(globals::g_player->rect, *region)) globals::g_player->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
 
-		for (unsigned short i = 0; i < globals::g_ScreenObjects.size(); i++)
+		if (globals::grid)
 		{
-			if (intersecting(globals::g_ScreenObjects.at(i)->rect, *region))
+			for (unsigned short i = 1; i <= 12; i++) //grid horizontal
 			{
+				MoveToEx(buffer, 64 * i, 0, NULL);
+				LineTo(buffer, 64 * i, 576);
+			}
 
-				if (globals::g_debug == false and globals::g_ScreenObjects.at(i)->debug == true)
-					globals::g_ScreenObjects.at(i)->hide();
-				else if (globals::g_ScreenObjects.at(i)->debug == true)
-					globals::g_ScreenObjects.at(i)->show();
-
-				if (globals::g_ScreenObjects.at(i)->visible)
-				{
-					COLORREF tempCol = globals::g_ScreenObjects.at(i)->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
-					SelectObject(buffer, buffermap);
-					RECT temprect = globals::g_ScreenObjects.at(i)->rect;
-					temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
-					drawText(&buffer, globals::g_ScreenObjects.at(i)->text, temprect, globals::g_ScreenObjects.at(i)->txtFlag, tempCol);
-				}
+			for (unsigned short i = 1; i <= 9; i++) //grid vertical
+			{
+				MoveToEx(buffer, 0, 64 * i, NULL);
+				LineTo(buffer, 768, 64 * i);
 			}
 		}
-		break;
 	}
-	BitBlt(hdc, 0, 0, 784, 615, buffer, 0, 0, SRCCOPY);
+
+	if(intersecting(*region, createRECT(0, 576, 200, 140))) FillRect(buffer, &createRECT(0, 576, 200, 140), bg);
+
+	if(intersecting(*region, createRECT(620, 576, 150, 140))) FillRect(buffer, &createRECT(620, 576, 150, 140), bg);
+
+	if(intersecting(*region, createRECT(200, 576, 425, 140))) FillRect(buffer, &createRECT(200, 576, 425, 140), bg);
+
+	for (unsigned short i = 0; i < globals::g_ScreenObjects.size(); i++) //buttons and images
+	{
+		if (intersecting(*region, globals::g_ScreenObjects.at(i)->rect))
+		{
+			if (globals::g_debug == false and globals::g_ScreenObjects.at(i)->debug == true)
+				globals::g_ScreenObjects.at(i)->hide();
+			else if (globals::g_ScreenObjects.at(i)->debug == true)
+				globals::g_ScreenObjects.at(i)->show();
+
+			if (globals::g_ScreenObjects.at(i)->visible)
+			{
+				COLORREF tempCol = globals::g_ScreenObjects.at(i)->draw(&buffer, globals::g_mouseX, globals::g_mouseY, globals::g_mouseDown);
+				SelectObject(buffer, buffermap);
+				RECT temprect = globals::g_ScreenObjects.at(i)->rect;
+				temprect.top = ((temprect.bottom + temprect.top) / 2) - 8;
+				drawText(&buffer, globals::g_ScreenObjects.at(i)->text, temprect, globals::g_ScreenObjects.at(i)->txtFlag, tempCol);
+			}
+		}
+	}
+
+	if (intersecting(*region, createRECT(530, 610, 64, 64)))
+	{
+		tile tyle = tile(globals::tilesets.at(globals::curTileSet - 1), globals::curTile % 11, globals::curTile / 11, globals::bpIcons);
+		tyle.draw(&buffer, 530, 610, false);
+	}
+
+	BitBlt(hdc, 0, 0, 784, 752, buffer, 0, 0, SRCCOPY);
 	DeleteDC(buffer);
 	DeleteDC(hdc);
 	DeleteObject(buffermap);
 	EndPaint(hWnd, &ps);
 }
-
-
