@@ -166,7 +166,7 @@ bool loadLevel(std::string file)
 
 tileSet* tileset = new tileSet(TSimg, TSmask, 64, 64);
 std::vector<tileSet*> tilesets;
-level* lvl;;
+level* lvl;
 
 Text* mouseXtxt = new Text(createRECT(0, 0, 150, 18), RGB(255, 255, 255), "NULL", DT_LEFT, true);
 Text* mouseYtxt = new Text(createRECT(0, 17, 150, 18), RGB(255, 255, 255), "NULL", DT_LEFT, true);
