@@ -1,4 +1,4 @@
-#include "framework.h"
+﻿#include "framework.h"
 #include "levelEditor.h"
 
 #define MAX_LOADSTRING 100
@@ -122,14 +122,30 @@ HBITMAP CreateBitmapMask(HBITMAP hbmColour, COLORREF crTransparent)
     return hbmMask;
 }
 
+void optimizeCur()
+{
+    unsigned short curstage = globals::curStageX + globals::curStageY * globals::g_level->lw;
+    globals::g_level->foreground[curstage].optimize();
+    globals::g_level->background[curstage].optimize();
+}
+
+void unoptimizeCur()
+{
+    unsigned short curstage = globals::curStageX + globals::curStageY * globals::g_level->lw;
+    globals::g_level->foreground[curstage].unoptimize();
+    globals::g_level->background[curstage].unoptimize();
+}
+
 Text* stageYn = new Text(createRECT(30, 633, 125, 25), RGB(195, 195, 195), L"Stage Y: " + std::to_wstring(globals::curStageY));
 void moveDstage(int n)
 {
+    optimizeCur();
     if (globals::curStageY > globals::g_level->lh - 2)
     {
         if (globals::loop)globals::curStageY = 0;
     }
     else globals::curStageY++;
+    unoptimizeCur();
     stageYn->text = L"Stage Y: " + std::to_wstring(globals::curStageY);
     RECT temp = { 0, 0, 768, 576 };
     InvalidateRect(wnd, &temp, true);
@@ -137,11 +153,13 @@ void moveDstage(int n)
 
 void moveUstage(int n)
 {
+    optimizeCur();
     if (globals::curStageY < 1)
     {
         if (globals::loop)globals::curStageY = globals::g_level->lh - 1;
     }
     else globals::curStageY--;
+    unoptimizeCur();
     stageYn->text = L"Stage Y: " + std::to_wstring(globals::curStageY);
     RECT temp = { 0, 0, 768, 576 };
     InvalidateRect(wnd, &temp, true);
@@ -150,11 +168,13 @@ void moveUstage(int n)
 Text* stageXn = new Text(createRECT(30, 613, 125, 25), RGB(195, 195, 195), L"Stage X: " + std::to_wstring(globals::curStageX));
 void moveLstage(int n)
 {
+    optimizeCur();
     if (globals::curStageX < 1)
     {
         if (globals::loop)globals::curStageX = globals::g_level->lw - 1;
     }
     else globals::curStageX--;
+    unoptimizeCur();
     stageXn->text = L"Stage X: " + std::to_wstring(globals::curStageX);
     RECT temp = { 0, 0, 768, 576 };
     InvalidateRect(wnd, &temp, true);
@@ -162,11 +182,13 @@ void moveLstage(int n)
 
 void moveRstage(int n)
 {
+    optimizeCur();
     if (globals::curStageX > globals::g_level->lw - 2)
     {
         if (globals::loop)globals::curStageX = 0;
     }
     else globals::curStageX++;
+    unoptimizeCur();
     stageXn->text = L"Stage X: " + std::to_wstring(globals::curStageX);
     RECT temp = { 0, 0, 768, 576 };
     InvalidateRect(wnd, &temp, true);
@@ -175,24 +197,6 @@ void moveRstage(int n)
 void settile(int n)
 {
     globals::curTile = n;
-    RECT temp = { 530, 610, 594, 674 };
-    InvalidateRect(wnd, &temp, true);
-}
-
-void moveLtile(int n)
-{
-    if (globals::curTile < 1)
-        globals::curTile = 98;
-    else globals::curTile--;
-    RECT temp = { 530, 610, 594, 674 };
-    InvalidateRect(wnd, &temp, true);
-}
-
-void moveRtile(int n)
-{
-    if (globals::curTile > 97)
-        globals::curTile = 0;
-    else globals::curTile++;
     RECT temp = { 530, 610, 594, 674 };
     InvalidateRect(wnd, &temp, true);
 }
@@ -307,7 +311,7 @@ void save(bool backupSave = false)
 
             stage* curStageB = &globals::g_level->background[i];
             file << 'B';
-            for (unsigned char j = 0; j < 108; j++)
+            for (unsigned char j = 0; j < curStageB->data.size(); j++) //using the size so handmade levels can be properly saved
             {
 
                 if (j % 12 == 0 && j != 0)
@@ -315,7 +319,7 @@ void save(bool backupSave = false)
                     file << ",\n-";
                 }
 
-                unsigned short tileID = (curStageB->data.at(j)->tx + curStageB->data.at(j)->ty * 12);
+                unsigned short tileID = (curStageB->data.at(j)->tx + curStageB->data.at(j)->ty * 11);
                 file << ((tileID < 10) ? "0" + std::to_string(tileID) : std::to_string(tileID));
             }
             file << ";\n";
@@ -333,19 +337,53 @@ void saveAs()
 }
 
 unsigned char tlw, tlh;
+unsigned char tscx, tscy, tsx, tsy;
+unsigned char tex, tey, tes;
 void newF(unsigned char lw, unsigned char lh, bool del = true)
 {
     globals::fileName = L"![untitledLevel]!";
-    if (del) delete globals::g_level;
+    if (del)
+    {
+        save(true);
+        delete globals::g_level;
+    }
     globals::g_level = new level(lw, lh, &globals::tilesets, globals::bpIcons);
+    globals::g_level->startCX = tscx;
+    globals::g_level->startCY = tscy;
+    globals::g_level->startX = tsx;
+    globals::g_level->startY = tsy;
+    globals::g_level->endCX = tex;
+    globals::g_level->endCY = tey;
+    globals::g_level->endS = tes;
     globals::curStageX = 0;
     globals::curStageY = 0;
+    unoptimizeCur();
     stageXn->text = L"Stage X: " + std::to_wstring(globals::curStageX);
     stageYn->text = L"Stage Y: " + std::to_wstring(globals::curStageY);
     RECT temp = { 0, 0, 768, 576 };
     InvalidateRect(wnd, &temp, true);
-    if (del) save(true);
+    
 }
+
+void selectForeground(int n); //forward declartion b/c buttons
+
+void selectBackground(int n);
+
+void moveRtile(int n);
+void moveLtile(int n);
+
+void xAddOff(int n);
+void yAddOff(int n);
+void xSubOff(int n);
+void ySubOff(int n);
+
+void resetOffsets(int n);
+
+void Addsid(int n);
+void Subsid(int n);
+
+void Addfric(int n);
+void Subfric(int n);
 
 tileSet* tileset = new tileSet(TSimg, TSmask, 64, 64);
 level* lvl;
@@ -366,6 +404,7 @@ Text* debugtxt = new Text(createRECT(0, 130, 250, 18), RGB(255, 255, 255), L"Deb
 Text* fpstxt = new Text(createRECT(0, 150, 250, 18), RGB(255, 255, 255), L"FPS: " + std::to_wstring(globals::g_fps), DT_LEFT, true);
 Text* Afpstxt = new Text(createRECT(0, 168, 250, 18), RGB(255, 255, 255), L"AFPS: " + std::to_wstring(globals::g_fps), DT_LEFT, true);
 
+//UI
 Button* stageL = new Button(createRECT(5, 620, 50, 32), OBJECTCOLOR, moveLstage, L"<-");
 Button* stageR = new Button(createRECT(135, 620, 50, 32), OBJECTCOLOR, moveRstage, L"->");
 
@@ -374,6 +413,154 @@ Button* stageD = new Button(createRECT(69, 658, 50, 32), OBJECTCOLOR, moveDstage
 
 Text* loopTxt = new Text(createRECT(125, 583, 40, 25), RGB(195, 195, 195), L"Wrap");
 CheckBox* loopStage = new CheckBox(createRECT(165, 580, 30, 30), OBJECTCOLOR, &globals::loop);
+
+Button* selFore = new Button(createRECT(200, 610, 150, 32), OBJECTCOLOR, selectForeground, L"Foreground");
+Button* selBack = new Button(createRECT(200, 650, 150, 32), OBJECTCOLOR, selectBackground, L"Background");
+CheckBox* showFore = new CheckBox(createRECT(351, 610, 32, 32), OBJECTCOLOR, &globals::showForeground, L"Vis");
+CheckBox* showBack = new CheckBox(createRECT(351, 650, 32, 32), OBJECTCOLOR, &globals::showBackground, L"Vis");
+
+Text* curTileTxt = new Text(createRECT(406, 653, 32, 32), RGB(195, 195, 195), L"0");
+Button* rTile = new Button(createRECT(436, 660, 18, 18), OBJECTCOLOR, moveRtile, L">");
+Button* lTile = new Button(createRECT(390, 660, 18, 18), OBJECTCOLOR, moveLtile, L"<");
+
+Text* xOffTxt = new Text(createRECT(622, 590, 120, 18), RGB(195, 195, 195), L"X Offset: 0");
+Text* yOffTxt = new Text(createRECT(622, 610, 120, 18), RGB(195, 195, 195), L"Y Offset: 0");
+
+Button* xOffP = new Button(createRECT(730, 590, 36, 18), OBJECTCOLOR, xAddOff, L">");
+Button* yOffP = new Button(createRECT(730, 610, 36, 18), OBJECTCOLOR, yAddOff, L">");
+Button* xOffM = new Button(createRECT(597, 590, 36, 18), OBJECTCOLOR, xSubOff, L"<");
+Button* yOffM = new Button(createRECT(597, 610, 36, 18), OBJECTCOLOR, ySubOff, L"<");
+
+Button* resetOffsetsB = new Button(createRECT(675, 635, 25, 25), OBJECTCOLOR, resetOffsets, L"R");
+
+CheckBox* useDefaultBtn = new CheckBox(createRECT(545, 590, 18, 18), OBJECTCOLOR, &globals::useDefault);
+Text* useDefaultTxt = new Text(createRECT(450, 590, 100, 18), RGB(195, 195, 195), L"Use Default:");
+
+CheckBox* useSolidBtn = new CheckBox(createRECT(545, 610, 18, 18), OBJECTCOLOR, &globals::solid);
+Text* useSolidTxt = new Text(createRECT(450, 610, 100, 18), RGB(195, 195, 195), L"Solid:");
+
+CheckBox* useKillerBtn = new CheckBox(createRECT(545, 630, 18, 18), OBJECTCOLOR, &globals::deadly);
+Text* useKillerTxt = new Text(createRECT(450, 630, 100, 18), RGB(195, 195, 195), L"Deadly:");
+
+Text* sidTxt = new Text(createRECT(622, 665, 120, 18), RGB(195, 195, 195), L"SID: 0");
+Button* sidP = new Button(createRECT(730, 665, 36, 18), OBJECTCOLOR, Addsid, L">");
+Button* sidM = new Button(createRECT(597, 665, 36, 18), OBJECTCOLOR, Subsid, L"<");
+
+Text* frictionTxt = new Text(createRECT(460, 650, 100, 18), RGB(195, 195, 195), L"Friction: 0.3");
+Button* frictionP = new Button(createRECT(511, 668, 18, 18), OBJECTCOLOR, Addfric, L">");
+Button* frictionM = new Button(createRECT(490, 668, 18, 18), OBJECTCOLOR, Subfric, L"<");
+Button* frictionPP = new Button(createRECT(530, 668, 18, 18), OBJECTCOLOR, Addfric, L">>");
+Button* frictionMM = new Button(createRECT(471, 668, 18, 18), OBJECTCOLOR, Subfric, L"<<");
+
+void selectForeground(int n)
+{
+    selFore->active = false;
+    selBack->active = true;
+    globals::layer = 1;
+}
+
+void selectBackground(int n)
+{
+    selBack->active = false;
+    selFore->active = true;
+    globals::layer = 0;
+}
+
+void moveLtile(int n)
+{
+    if (globals::curTile < 1)
+        globals::curTile = 98;
+    else globals::curTile--;
+    curTileTxt->text = std::to_wstring(globals::curTile);
+    if (globals::useDefault)
+    {
+        globals::solid = (globals::curTile > 10);
+        globals::friction = (globals::curTile > 32 && globals::curTile < 44) ? 0.02f : 0.3f; //for slippery blocks
+        globals::deadly = (globals::curTile > 21 && globals::curTile < 33) ? true : false;
+        std::wstring fric = std::to_wstring(globals::friction);
+        frictionTxt->text = L"Friction: " + fric.substr(0, fric.find_last_not_of('0') + 1);
+    }
+    RECT temp = { 530, 590, 594, 654 };
+    InvalidateRect(wnd, &temp, true);
+}
+
+void moveRtile(int n)
+{
+    if (globals::curTile > 97)
+        globals::curTile = 0;
+    else globals::curTile++;
+    curTileTxt->text = std::to_wstring(globals::curTile);
+    if (globals::useDefault)
+    {
+        globals::solid = (globals::curTile > 10);
+        globals::friction = (globals::curTile > 32 && globals::curTile < 44) ? 0.02f : 0.3f; //for slippery blocks
+        globals::deadly = (globals::curTile > 21 && globals::curTile < 33) ? true : false;
+        std::wstring fric = std::to_wstring(globals::friction);
+        frictionTxt->text = L"Friction: " + fric.substr(0, fric.find_last_not_of('0') + 1);
+    }
+    RECT temp = { 530, 590, 594, 654 };
+    InvalidateRect(wnd, &temp, true);
+}
+
+void xAddOff(int n)
+{
+    globals::xOffset += 1;
+    xOffTxt->text = L"X Offset: " + std::to_wstring(globals::xOffset);
+}
+
+void yAddOff(int n)
+{
+    globals::yOffset += 1;
+    yOffTxt->text = L"Y Offset: " + std::to_wstring(globals::yOffset);
+}
+
+void xSubOff(int n)
+{
+    globals::xOffset -= 1;
+    xOffTxt->text = L"X Offset: " + std::to_wstring(globals::xOffset);
+}
+
+void ySubOff(int n)
+{
+    globals::yOffset -= 1;
+    yOffTxt->text = L"Y Offset: " + std::to_wstring(globals::yOffset);
+}
+
+void resetOffsets(int n)
+{
+    globals::yOffset = 0;
+    globals::xOffset = 0;
+    globals::sID = 0;
+    yOffTxt->text = L"Y Offset: 0";
+    xOffTxt->text = L"X Offset: 0";
+    sidTxt->text = L"SID: 0";
+}
+
+void Addsid(int n)
+{
+    globals::sID++;
+    sidTxt->text = L"SID: " + std::to_wstring(globals::sID);
+}
+
+void Subsid(int n)
+{
+    globals::sID--;
+    sidTxt->text = L"SID: " + std::to_wstring(globals::sID);
+}
+
+void Addfric(int n)
+{
+    globals::friction += (0.01f * n);
+    std::wstring fric = std::to_wstring(globals::friction);
+    frictionTxt->text = L"Friction: " + fric.substr(0, fric.find_last_not_of('0')+1);
+}
+
+void Subfric(int n)
+{
+    globals::friction -= (0.01f * n);
+    std::wstring fric = std::to_wstring(globals::friction);
+    frictionTxt->text = L"Friction: " + fric.substr(0, fric.find_last_not_of('0') + 1);
+}
 
 void buildScreenObjects()
 {
@@ -386,7 +573,7 @@ void buildScreenObjects()
 
     newF(1, 1, false);
 
-    globals::g_ScreenObjects.reserve(18);
+    globals::g_ScreenObjects.reserve(46);
 
     globals::g_ScreenObjects.push_back(mouseXtxt);
     globals::g_ScreenObjects.push_back(mouseYtxt);
@@ -413,6 +600,52 @@ void buildScreenObjects()
 
     globals::g_ScreenObjects.push_back(loopStage);
     globals::g_ScreenObjects.push_back(loopTxt);
+
+    selFore->active = false;
+    globals::g_ScreenObjects.push_back(selFore);
+    globals::g_ScreenObjects.push_back(selBack);
+
+    globals::g_ScreenObjects.push_back(showFore);
+    globals::g_ScreenObjects.push_back(showBack);
+
+    globals::g_ScreenObjects.push_back(curTileTxt);
+    globals::g_ScreenObjects.push_back(rTile);
+    globals::g_ScreenObjects.push_back(lTile);
+
+    globals::g_ScreenObjects.push_back(xOffTxt);
+    globals::g_ScreenObjects.push_back(yOffTxt);
+
+    globals::g_ScreenObjects.push_back(xOffP);
+    globals::g_ScreenObjects.push_back(yOffP);
+    globals::g_ScreenObjects.push_back(xOffM);
+    globals::g_ScreenObjects.push_back(yOffM);
+
+    globals::g_ScreenObjects.push_back(resetOffsetsB);
+
+    globals::g_ScreenObjects.push_back(useDefaultBtn);
+    globals::g_ScreenObjects.push_back(useDefaultTxt);
+
+    useSolidBtn->active = false;
+    globals::g_ScreenObjects.push_back(useSolidBtn);
+    globals::g_ScreenObjects.push_back(useSolidTxt);
+
+    useKillerBtn->active = false;
+    globals::g_ScreenObjects.push_back(useKillerBtn);
+    globals::g_ScreenObjects.push_back(useKillerTxt);
+
+    frictionP->active = false;
+    frictionM->active = false;
+    frictionPP->active = false;
+    frictionMM->active = false;
+    globals::g_ScreenObjects.push_back(frictionP);
+    globals::g_ScreenObjects.push_back(frictionM);
+    globals::g_ScreenObjects.push_back(frictionPP);
+    globals::g_ScreenObjects.push_back(frictionMM);
+    globals::g_ScreenObjects.push_back(frictionTxt);
+
+    globals::g_ScreenObjects.push_back(sidP);
+    globals::g_ScreenObjects.push_back(sidM);
+    globals::g_ScreenObjects.push_back(sidTxt);
 }
 
 void freeMem()
@@ -470,6 +703,7 @@ void load(LPWSTR file)
         globals::fileName = file;
         globals::curStageX = 0;
         globals::curStageY = 0;
+        unoptimizeCur();
         stageXn->text = L"Stage X: " + std::to_wstring(globals::curStageX);
         stageYn->text = L"Stage Y: " + std::to_wstring(globals::curStageY);
         RECT temp = { 0, 0, 768, 576 };
@@ -572,9 +806,6 @@ void pressed(WPARAM key)
     case VK_DOWN:
         moveDstage(0);
         break;
-    case VK_ESCAPE:
-        //@TODO
-        break;
     case 0x47:
         gridToggle();
         break;
@@ -602,14 +833,6 @@ void pressed(WPARAM key)
     }
 }
 
-void depressed(WPARAM key)
-{
-    switch (key)
-    {
-
-    }
-}
-
 void place(unsigned short tileID)
 {
     unsigned short stage = globals::curStageX + globals::curStageY * globals::g_level->lw;
@@ -624,7 +847,7 @@ void place(unsigned short tileID)
         globals::prevTile = tileID;
 
         unsigned char tX = tileID % 11;
-        unsigned char tY = floor(tileID / 11);
+        unsigned char tY = unsigned char(floor(tileID / 11));
 
         std::vector<tile*>* lvlPtr = nullptr;
         if (globals::layer) lvlPtr = &globals::g_level->foreground[stage].data; //swag strats   
@@ -643,22 +866,18 @@ void place(unsigned short tileID)
             tyle->killer = globals::deadly;
             tyle->friction = globals::friction;
             tyle->specialID = globals::sID;
-            tyle->hitXOff = globals::xOffset;
-            tyle->hitYOff = globals::yOffset;
-            tyle->imgXOff = globals::xOffset;
-            tyle->imgYOff = globals::yOffset;
         }
+        tyle->hitXOff = globals::xOffset;
+        tyle->hitYOff = globals::yOffset;
+        tyle->imgXOff = globals::xOffset;
+        tyle->imgYOff = globals::yOffset;
 
         if (!tyle->isEqual(lvlPtr->at(cell))) //invalidating the rect is very very very cpu heavy, we want to avoid it whenever possible
         {
-            if (globals::layer) {
-                delete lvlPtr->at(cell); //cool memory mangement strats
-                lvlPtr->at(cell) = tyle;
-            }
-            else {
-                delete lvlPtr->at(cell);
-                lvlPtr->at(cell) = tyle;
-            }
+
+            delete lvlPtr->at(cell); //cool memory mangement strats
+            lvlPtr->at(cell) = tyle;
+            
             RECT temp = { 0, 0, 768, 576 };
             InvalidateRect(wnd, &temp, true);
         }
@@ -718,6 +937,144 @@ BOOL CALLBACK newProc(HWND hwndDlg,
             }
             break;
         }
+        case IDC_ENDX:
+        {
+            int len = GetWindowTextLength(GetDlgItem(hwndDlg, IDC_ENDX));
+            if (len > 0)
+            {
+                LPTSTR buf = new TCHAR[len];
+                GetDlgItemText(hwndDlg, IDC_ENDX, buf, len + 1);
+
+                int tmp = _ttoi(buf);
+                if (tmp < 0 || tmp >= tlw)
+                {
+                    tex = 0;
+                }
+                else
+                {
+                    tex = tmp;
+                }
+                //delete[] buf;
+            }
+            break;
+        }
+        case IDC_ENDY:
+        {
+            int len = GetWindowTextLength(GetDlgItem(hwndDlg, IDC_ENDY));
+            if (len > 0)
+            {
+                LPTSTR buf = new TCHAR[len];
+                GetDlgItemText(hwndDlg, IDC_ENDY, buf, len + 1);
+
+                int tmp = _ttoi(buf);
+                if (tmp < 0 || tmp >= tlh)
+                {
+                    tey = 0;
+                }
+                else
+                {
+                    tey = tmp;
+                }
+                //delete[] buf;
+            }
+            break;
+        }
+        case IDC_STARTCX:
+        {
+            int len = GetWindowTextLength(GetDlgItem(hwndDlg, IDC_STARTCX));
+            if (len > 0)
+            {
+                LPTSTR buf = new TCHAR[len];
+                GetDlgItemText(hwndDlg, IDC_STARTCX, buf, len + 1);
+
+                int tmp = _ttoi(buf);
+                if (tmp < 0 || tmp >= tlw)
+                {
+                    tscx = 0;
+                }
+                else
+                {
+                    tscx = tmp;
+                }
+                //delete[] buf;
+            }
+            break;
+        }
+        case IDC_STARTCY:
+        {
+            int len = GetWindowTextLength(GetDlgItem(hwndDlg, IDC_STARTCY));
+            if (len > 0)
+            {
+                LPTSTR buf = new TCHAR[len];
+                GetDlgItemText(hwndDlg, IDC_STARTCY, buf, len + 1);
+
+                int tmp = _ttoi(buf);
+                if (tmp < 0 || tmp >= tlh)
+                {
+                    tscy = 0;
+                }
+                else
+                {
+                    tscy = tmp;
+                }
+                //delete[] buf;
+            }
+            break;
+        }
+        case IDC_STARTX:
+        {
+            int len = GetWindowTextLength(GetDlgItem(hwndDlg, IDC_STARTX));
+            if (len > 0)
+            {
+                LPTSTR buf = new TCHAR[len];
+                GetDlgItemText(hwndDlg, IDC_STARTX, buf, len + 1);
+
+                int tmp = _ttoi(buf);
+                if (tmp < 0 || tmp >= 12)
+                {
+                    tsx = 0;
+                }
+                else
+                {
+                    tsx = tmp;
+                }
+                //delete[] buf;
+            }
+            break;
+        }
+        case IDC_STARTY:
+        {
+            int len = GetWindowTextLength(GetDlgItem(hwndDlg, IDC_STARTY));
+            if (len > 0)
+            {
+                LPTSTR buf = new TCHAR[len];
+                GetDlgItemText(hwndDlg, IDC_STARTY, buf, len + 1);
+
+                int tmp = _ttoi(buf);
+                if (tmp < 0 || tmp >= 9)
+                {
+                    tsy = 0;
+                }
+                else
+                {
+                    tsy = tmp;
+                }
+                //delete[] buf;
+            }
+            break;
+        }
+        case IDC_RADIOTOP:
+            tes = 0;
+            break;
+        case IDC_RADIORIGHT:
+            tes = 1;
+            break;
+        case IDC_RADIOBOTTOM:
+            tes = 2;
+            break;
+        case IDC_RADIOLEFT:
+            tes = 3;
+            break;
         case IDOK:
             
         case IDCANCEL:
@@ -783,7 +1140,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         GetUpdateRect(hWnd, &temp, true);
         pnt(hWnd, &temp);
         Atimes++;
-    break;
+        break;
     case WM_ERASEBKGND:
         return TRUE;
     case WM_MOUSEWHEEL:
@@ -794,16 +1151,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         globals::g_mouseX = GET_X_LPARAM(lParam);
         globals::g_mouseY = GET_Y_LPARAM(lParam);
-        if (globals::g_mouseDown && globals::screen == 0)
+        if (globals::g_mouseX > 0 && globals::g_mouseX < 768)
         {
-            if (globals::g_mouseX > 0 && globals::g_mouseX < 768)
+            if (globals::g_mouseY > 0 && globals::g_mouseY < 576)
             {
-                if (globals::g_mouseY > 0 && globals::g_mouseY < 576)
-                {
-                    place(globals::curTile);
-                }
+                place(globals::curTile);
             }
         }
+        
         if (globals::g_debug)
         {
             mouseXtxt->text = L"Mouse X: " + std::to_wstring(globals::g_mouseX);
@@ -814,40 +1169,140 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_LBUTTONDOWN:
         globals::g_mouseDown = true;
         mouseDowntxt->text = L"Mouse Down: True";
-        if (globals::screen == 0)
+
+        if (stageL->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            stageL->press(0);
+            break;
+        }
+
+        if (stageR->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            stageR->press(0);
+            break;
+        }
+
+        if (stageU->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            stageU->press(0);
+            break;
+        }
+
+        if (stageD->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            stageD->press(0);
+            break;
+        }
+
+        if (selFore->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            selFore->press(0);
+            break;
+        }
+
+        if (selBack->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            selBack->press(0);
+            break;
+        }
+
+        if (useDefaultBtn->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            useDefaultBtn->press(0);
+            useKillerBtn->active = !globals::useDefault;
+            useSolidBtn->active = !globals::useDefault;
+            frictionP->active = !globals::useDefault;
+            frictionM->active = !globals::useDefault;
+            frictionPP->active = !globals::useDefault;
+            frictionMM->active = !globals::useDefault;
+            break;
+        }
+
+        if (showFore->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            showFore->press(0);
+            CheckMenuItem(menu, ID_VIEW_SHOWFOREGROUND, (globals::showForeground) ? MF_CHECKED : MF_UNCHECKED);
+            RECT temp = { 0, 0, 768, 576 };
+            InvalidateRect(wnd, &temp, true);
+            break;
+        }
+
+        if (showBack->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            showBack->press(0);
+            CheckMenuItem(menu, ID_VIEW_SHOWBACKGROUND, (globals::showBackground) ? MF_CHECKED : MF_UNCHECKED);
+            RECT temp = { 0, 0, 768, 576 };
+            InvalidateRect(wnd, &temp, true);
+            break;
+        }
+
+        if (loopStage->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            loopStage->press(0);
+            break;
+        }
+
+        if (rTile->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            rTile->press(0);
+            break;
+        }
+
+        if (lTile->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            lTile->press(0);
+            break;
+        }
+
+        if (xOffP->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            xOffP->press(0);
+            break;
+        }
+
+        if (yOffP->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            yOffP->press(0);
+            break;
+        }
+
+        if (xOffM->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            xOffM->press(0);
+            break;
+        }
+
+        if (yOffM->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            yOffM->press(0);
+            break;
+        }
+
+        if (resetOffsetsB->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            resetOffsetsB->press(0);
+            break;
+        }
+
+        if (useSolidBtn->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            useSolidBtn->press(0);
+            break;
+        }
+
+        if (useKillerBtn->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            useKillerBtn->press(0);
+            break;
+        }
+
+        if (frictionP->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            frictionP->press(1);
+            break;
+        }
+
+        if (frictionM->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            frictionM->press(1);
+            break;
+        }
+
+        if (frictionPP->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            frictionPP->press(10);
+            break;
+        }
+
+        if (frictionMM->Touching(globals::g_mouseX, globals::g_mouseY)) {
+            frictionMM->press(10);
+            break;
+        }
+
+        if (globals::g_mouseX > 0 && globals::g_mouseX < 768)
         {
-            if (stageL->Touching(globals::g_mouseX, globals::g_mouseY)) {
-                stageL->press(0);
-                break;
-            }
-
-            if (stageR->Touching(globals::g_mouseX, globals::g_mouseY)) {
-                stageR->press(0);
-                break;
-            }
-
-            if (stageU->Touching(globals::g_mouseX, globals::g_mouseY)) {
-                stageU->press(0);
-                break;
-            }
-
-            if (stageD->Touching(globals::g_mouseX, globals::g_mouseY)) {
-                stageD->press(0);
-                break;
-            }
-
-            if (loopStage->Touching(globals::g_mouseX, globals::g_mouseY)) {
-                loopStage->press(0);
-                break;
-            }
-
-            if (globals::g_mouseX > 0 && globals::g_mouseX < 768)
+            if (globals::g_mouseY > 0 && globals::g_mouseY < 576)
             {
-                if (globals::g_mouseY > 0 && globals::g_mouseY < 576)
-                {
-                    place(globals::curTile);
-                    break;
-                }
+                place(globals::curTile);
+                break;
             }
         }
         break;
@@ -888,9 +1343,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         case VK_TAB:
             globals::g_modKeys.at(VK_TAB) = false;
-            break;
-        default:
-            depressed(wParam);
+            break;    
         }
         if (globals::g_debug)
         {
@@ -920,11 +1373,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             else {
                 times++;
             }
-            if(globals::g_debug) InvalidateRect(hWnd, &createRECT(0, 0, 200, 190), true);
-            RECT temp = { 5, 577, 200, 702 }; //stage arrows
+            if (globals::g_debug) InvalidateRect(hWnd, &createRECT(0, 0, 200, 190), true);
+            RECT temp = { 5, 580, 770, 720 }; //bottom bar
             InvalidateRect(wnd, &temp, true);
-            temp = { 620, 580, 770, 720 }; //icon & grid check boxes
-            InvalidateRect(wnd, &temp, false);
             break;
         }
         break;
@@ -939,4 +1390,3 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
-

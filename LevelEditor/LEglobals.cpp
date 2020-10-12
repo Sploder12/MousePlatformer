@@ -1,8 +1,6 @@
 #include "LEGlobals.h"
 
-bool globals::g_debug = true;
-
-unsigned char globals::screen = 0; //0 is main, 1 is new popup
+bool globals::g_debug = false;
 
 std::vector<screenObject*> globals::g_ScreenObjects;
 level* globals::g_level;
@@ -20,7 +18,7 @@ unsigned int globals::refreshRate = 13;
 unsigned int globals::g_fps = 0;
 
 //used for placing optimizations
-unsigned char globals::prevCell = 61337; //defaults are values that would not be possible normally
+unsigned char globals::prevCell = 255; //defaults are values that would not be possible normally
 unsigned short globals::prevTile = 65535;
 
 unsigned char globals::curStageX = 0;
@@ -40,9 +38,9 @@ unsigned short globals::curTile = 0;
 
 //tile mods
 bool globals::useDefault = true;
-bool globals::solid = true;
+bool globals::solid = false;
 bool globals::deadly = false;
-float globals::friction = 0.01f;
+float globals::friction = 0.3f;
 unsigned short globals::sID = 0;
 int globals::xOffset = 0;
 int globals::yOffset = 0;

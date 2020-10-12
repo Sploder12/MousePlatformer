@@ -16,7 +16,17 @@
 #define IDD_NEWPOPUP                    133
 #define IDC_EDIT1                       1001
 #define IDC_EDIT2                       1002
-#define IDC_EDIT3                       1003
+#define IDC_RADIOLEFT                   1004
+#define IDC_RADIOBOTTOM                 1005
+#define IDC_RADIORIGHT                  1006
+#define IDC_RADIOTOP                    1007
+#define IDC_ENDX                        1008
+#define IDC_ENDY                        1009
+#define IDC_STARTY                      1011
+#define IDC_STARTX                      1012
+#define IDC_STARTCY                     1015
+#define IDC_STARTX2                     1016
+#define IDC_STARTCX                     1016
 #define ID_FILE_NEW                     32771
 #define ID_FILE_SAVE                    32772
 #define ID_FILE_SAVEAS                  32773
@@ -36,7 +46,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        134
 #define _APS_NEXT_COMMAND_VALUE         32781
-#define _APS_NEXT_CONTROL_VALUE         1004
+#define _APS_NEXT_CONTROL_VALUE         1012
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

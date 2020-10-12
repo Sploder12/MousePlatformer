@@ -1,8 +1,11 @@
 #include "paint.h"
 
 #define BGCOLOR RGB(195, 195, 195)
+#define REDCOLOR RGB(255, 0, 0)
+#define GREENCOLOR RGB(0, 255, 0)
 HBRUSH bg = CreateSolidBrush(BGCOLOR);
-
+HBRUSH red = CreateSolidBrush(REDCOLOR);
+HBRUSH green = CreateSolidBrush(GREENCOLOR);
 
 
 RECT createRECT(int left, int top, int width, int height)
@@ -68,6 +71,30 @@ void pnt(HWND hWnd, RECT* region)
 				LineTo(buffer, 768, 64 * i);
 			}
 		}
+		
+		if (globals::curStageX == globals::g_level->endCX && globals::curStageY == globals::g_level->endCY)
+		{
+			switch (globals::g_level->endS)
+			{
+			case 0:
+				FillRect(buffer, &createRECT(0, 0, 768, 3), red);
+				break;
+			case 1:
+				FillRect(buffer, &createRECT(765, 0, 768, 576), red);
+				break;
+			case 2:
+				FillRect(buffer, &createRECT(0, 573, 768, 576), red);
+				break;
+			case 3:
+				FillRect(buffer, &createRECT(0, 0, 3, 576), red);
+				break;
+			}
+		}
+
+		if (globals::curStageX == globals::g_level->startCX && globals::curStageY == globals::g_level->startCY)
+		{
+			FillRect(buffer, &createRECT(globals::g_level->startX*64 + 48, globals::g_level->startY * 64 + 48, 16, 16), green);
+		}
 	}
 
 	if(intersecting(*region, createRECT(0, 576, 200, 140))) FillRect(buffer, &createRECT(0, 576, 200, 140), bg);
@@ -96,10 +123,10 @@ void pnt(HWND hWnd, RECT* region)
 		}
 	}
 
-	if (intersecting(*region, createRECT(530, 610, 64, 64)))
+	if (intersecting(*region, createRECT(390, 590, 64, 64)))
 	{
 		tile tyle = tile(globals::tilesets.at(globals::curTileSet - 1), globals::curTile % 11, globals::curTile / 11, globals::bpIcons);
-		tyle.draw(&buffer, 530, 610, false);
+		tyle.draw(&buffer, 390, 590, false);
 	}
 
 	BitBlt(hdc, 0, 0, 784, 752, buffer, 0, 0, SRCCOPY);

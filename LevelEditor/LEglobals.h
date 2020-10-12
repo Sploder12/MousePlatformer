@@ -9,8 +9,6 @@ class globals {
 public:
 	static bool g_debug;
 
-	static unsigned char screen;
-
 	static std::vector<screenObject*> g_ScreenObjects;
 	static level* g_level;
 	static std::wstring fileName;

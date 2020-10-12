@@ -58,7 +58,7 @@ struct Button : public screenObject
 
 	void screenObject::press(int n)
 	{
-		(this->onPress)(n);
+		if(this->active) (this->onPress)(n);
 	}
 
 	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
@@ -108,7 +108,7 @@ struct CheckBox : public screenObject
 
 	void screenObject::press(int n)
 	{
-		*this->valPtr = !*(this->valPtr);
+		if (this->active) *this->valPtr = !*(this->valPtr);
 	}
 
 	COLORREF screenObject::draw(HDC* hdc, long mousX, long mouseY, bool mouseDown)
@@ -312,7 +312,7 @@ struct stage
 
 	stage()
 	{
-		this->data.reserve(108);
+		//this->data.reserve(108);
 	}
 
 	stage(std::string data, std::vector<tileSet*>* tileSets, unsigned short tilesetID, tileSet* icons)
@@ -326,8 +326,8 @@ struct stage
 		for (unsigned int i = 0; i < 108; i++)
 		{
 			temp = "";
-			temp += data.at(i * 2);
-			temp += data.at((i * 2) + 1);
+			temp += data[i * 2];
+			temp += data[(i * 2) + 1];
 			unsigned short tileID = std::stoi(temp);
 			bool solid = (tileID > 10);
 			float friction = (tileID > 32 && tileID < 44) ? 0.02f : 0.3f; //for slippery blocks
@@ -337,34 +337,108 @@ struct stage
 		exists = true;
 	}
 
+	std::vector<unsigned char> difTileIndeci()
+	{
+		std::vector<unsigned char> out;
+		if (exists)
+		{
+
+			out.push_back(0);
+
+			for (unsigned char i = 1; i < data.size(); i++)
+			{
+				if (data[i] != data[i - 1]) out.push_back(i);
+			}
+		}
+		return out;
+	}
+
+	void optimize()
+	{
+		if (exists)
+		{
+			for (unsigned char i = 1; i < data.size(); i++)
+			{
+				if (data[i]->isEqual(data[i - 1]))
+				{
+					delete data[i];
+					data[i] = data[i - 1]; //simple but effective cause pointers
+				}
+			}
+		}
+	}
+
+	void unoptimize()
+	{
+		if (exists)
+		{
+			std::vector<unsigned char> indexs = difTileIndeci();
+			if(indexs.size() <= 1)
+			{
+				for (unsigned char j = 1; j < 108; j++)
+				{
+					tile* tmp = new tile(*this->data[0]);
+					this->data[j] = tmp;
+				}
+			}
+			else
+			{
+				for (unsigned char i = 0; i < indexs.size(); i++)
+				{
+					unsigned char start = indexs[i] + 1;
+					unsigned char end = 108;
+					if (i != indexs.size() - 1) end = indexs[i + 1];
+				
+					for (unsigned char j = start; j < end; j++)
+					{
+						tile* tmp = new tile(*this->data[indexs[i]]);
+						this->data[j] = tmp;
+					}
+				}
+			}
+		}
+	}
+
 	void populateEmpty(std::vector<tileSet*>* tileSets, unsigned short tilesetID, tileSet* icons)
 	{
-		for (unsigned int i = 0; i < 108; i++)
+		this->data.reserve(108);
+		this->data.emplace_back(new tile(tileSets->at(tilesetID - 1), 0, 0, icons, false, 0.3f));
+		this->data.resize(108);
+		for (unsigned char i = 1; i < 108; i++)
 		{
-			this->data.emplace_back(new tile(tileSets->at(tilesetID - 1), 0, 0, icons, false, 0.3f));
+			this->data[i] = this->data[0];
 		}
 		exists = true;
+		//this->optimize();
 	}
 
 	void draw(HDC* hdc, bool sicos)
 	{
 		if (exists)
 		{
-			for (unsigned short i = 0; i < data.size(); i++)
+			for (unsigned char i = 0; i < data.size(); i++)
 			{
-				data.at(i)->draw(hdc, (i % 12) * 64, (int)floor(i / 12) * 64, sicos);
+				data[i]->draw(hdc, (i % 12) * 64, (int)floor(i / 12) * 64, sicos);
 			}
 		}
 	}
 
 	~stage()
 	{
-		size_t size = this->data.size();
-		for (unsigned short i = 0; i < size; i++)
+		std::vector<unsigned char> indexs = difTileIndeci();
+		if (indexs.size() == 1) 
 		{
-			if (this->data.size() > 0) delete this->data.at(i);
+			if (this->data[indexs[0]]->imgXOff == -572662307) //essentially a NULL check
+			{												  //Don't ask me why this works, it just does.
+				indexs.resize(0);
+			}
 		}
-		this->data.clear();
+
+		for (unsigned short i = 0; i < indexs.size(); i++)
+		{
+			if (this->data[indexs[i]]->imgXOff != -572662307) delete this->data[indexs[i]];
+		}
+		this->data.resize(0);
 	}
 };
 
@@ -403,11 +477,15 @@ struct level : public screenObject
 		uninit = false;
 		stage* fGrnd = new stage[lw * lh];
 		stage* bGrnd = new stage[lw * lh];
-		for (unsigned short i = 0; i < lw * lh; i++)
+
+		fGrnd[0].populateEmpty(tileS, 1, iconSet);
+		bGrnd[0].populateEmpty(tileS, 1, iconSet); 
+		for (unsigned short i = 1; i < lw * lh; i++)
 		{
-			fGrnd[i].populateEmpty(tileS, 1, iconSet);
-			bGrnd[i].populateEmpty(tileS, 1, iconSet);
+			fGrnd[i] = fGrnd[0]; //speed strats
+			bGrnd[i] = bGrnd[0];
 		}
+
 		this->foreground = fGrnd;
 		this->background = bGrnd;
 	}
@@ -437,7 +515,8 @@ struct level : public screenObject
 			unsigned int start;
 			unsigned int end;
 
-			unsigned short stag = 0;
+			bool stageChanged = false;
+			unsigned short stag;
 			unsigned short tilesetID;
 			std::string temp = "";
 			while (std::getline(lvlDat, dat)) {
@@ -497,7 +576,13 @@ struct level : public screenObject
 					{
 						temp += dat.at(i);
 					}
+					if (stageChanged)
+					{
+						foreground[stag].optimize();
+						background[stag].optimize();
+					}
 					stag = std::stoi(temp);
+					stageChanged = true;
 
 					temp = "";
 					start = unsigned int(dat.find_first_of(':', end) + 1);
@@ -580,6 +665,8 @@ struct level : public screenObject
 				}
 			}
 			lvlDat.close();
+			foreground[stag].optimize();
+			background[stag].optimize();
 			return true;
 		}
 		else return false;
