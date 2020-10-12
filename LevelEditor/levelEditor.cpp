@@ -1151,14 +1151,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         globals::g_mouseX = GET_X_LPARAM(lParam);
         globals::g_mouseY = GET_Y_LPARAM(lParam);
-        if (globals::g_mouseX > 0 && globals::g_mouseX < 768)
-        {
-            if (globals::g_mouseY > 0 && globals::g_mouseY < 576)
+        if (globals::g_mouseDown) {
+            if (globals::g_mouseX > 0 && globals::g_mouseX < 768)
             {
-                place(globals::curTile);
+                if (globals::g_mouseY > 0 && globals::g_mouseY < 576)
+                {
+                    place(globals::curTile);
+                }
             }
         }
-        
         if (globals::g_debug)
         {
             mouseXtxt->text = L"Mouse X: " + std::to_wstring(globals::g_mouseX);
