@@ -1,7 +1,7 @@
 #include <windows.h>
-#include <string>
 #include <fstream>
 #include <algorithm>
+#include "sound.h"
 
 struct screenObject
 {
@@ -356,14 +356,14 @@ struct level : public screenObject
 
 	std::vector<tileSet*>* tileSets;
 
-	level(std::string file, std::vector<tileSet*>* tileSet) :
+	level(LPCWSTR file, std::vector<tileSet*>* tileSet) :
 		screenObject(rect, RGB(0, 0, 0), ""), tileSets(tileSet)
 	{
 		if (!loadLevel(file))
 			delete this;
 	}
 
-	bool loadLevel(std::string file)
+	bool loadLevel(LPCWSTR file)
 	{
 		if (lw != 0 && lh != 0)
 		{
@@ -628,7 +628,6 @@ struct player : public screenObject
 	{
 		this->rect.top += long(y);
 		this->rect.bottom += long(y + 64);
-
 	}
 
 	void setX(float x)

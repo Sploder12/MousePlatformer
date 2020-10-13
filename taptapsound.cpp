@@ -146,7 +146,7 @@ void quit(int n)
     globals::g_player->lvl = 1;
 }
 
-bool loadLevel(std::string file)
+bool loadLevel(LPCWSTR file)
 {
     bool retur = globals::g_level->loadLevel(file);
     globals::g_player->Cx = globals::g_level->startCX;
@@ -162,6 +162,49 @@ bool loadLevel(std::string file)
     globals::g_player->save();
     globals::g_player->lvl += 1;
     return retur;
+}
+
+HRESULT loadDBox()
+{
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED |
+        COINIT_DISABLE_OLE1DDE);
+    if (SUCCEEDED(hr))
+    {
+        IFileOpenDialog* pFileOpen;
+
+        // Create the FileOpenDialog object.
+        hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL,
+            IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+        if (SUCCEEDED(hr))
+        {
+            // Show the Open dialog box.
+            hr = pFileOpen->Show(wnd);
+
+            // Get the file name from the dialog box.
+            if (SUCCEEDED(hr))
+            {
+                IShellItem* pItem;
+                hr = pFileOpen->GetResult(&pItem);
+                if (SUCCEEDED(hr))
+                {
+                    PWSTR pszFilePath;
+                    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+                    // Display the file name to the user.
+                    if (SUCCEEDED(hr))
+                    {
+                        loadLevel(pszFilePath);
+                        CoTaskMemFree(pszFilePath);
+                    }
+                    pItem->Release();
+                }
+            }
+            pFileOpen->Release();
+        }
+        CoUninitialize();
+    }
+    return 0;
 }
 
 tileSet* tileset = new tileSet(TSimg, TSmask, 64, 64);
@@ -193,7 +236,7 @@ void startN(int n)
     globals::g_player->xvel = 0.0f;
     globals::g_player->yvel = 0.0f;
     globals::g_player->lvl = 1;
-    loadLevel("level1.txt");
+    loadLevel(L"level1.txt");
     globals::prevScreen = globals::curScreen;
     globals::curScreen = 3;
 }
@@ -204,7 +247,10 @@ void cont(int n)
     {
         globals::g_player->xvel = 0.0f;
         globals::g_player->yvel = 0.0f;
-        loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+        std::wstring str = L"level";
+        str += std::to_wstring(globals::g_player->lvl);
+        str += L".txt";
+        loadLevel(str.c_str());
         globals::prevScreen = globals::curScreen;
         globals::curScreen = 3;
     }
@@ -213,6 +259,9 @@ void cont(int n)
 
 void end(int n)
 {
+    closeAlias(L"hit");
+    closeAlias(L"good");
+    closeAlias(L"bad");
     delete globals::NewGame;
     delete globals::Continue;
     delete globals::Options0;
@@ -265,7 +314,7 @@ void buildScreenObjects()
     tileset->sourceMask = TSmask;
     tilesets.push_back(tileset);
 
-    lvl = new level("level1.txt", &tilesets);
+    lvl = new level(L"level1.txt", &tilesets);
     globals::g_level = lvl;
 
     globals::g_player = new player(createRECT(lvl->startX,lvl->startY,64,64), playerSprite, playerMask, lvl, &wnd);
@@ -330,6 +379,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    mouseSpriteA = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICKA));
    mouseSpriteB = LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BRICKB));
    
+   playFile(TEXT("funny.mp3"), true);
+   openAlias(TEXT("hit.mp3"), L"hit");
+   openAlias(TEXT("goodplace.mp3"), L"good");
+   openAlias(TEXT("badplace.mp3"), L"bad");
+
    buildScreenObjects();
    SetTimer(hWnd, 1, globals::refreshRate, NULL);
    ShowWindow(hWnd, nCmdShow);
@@ -375,7 +429,10 @@ void pressed(WPARAM key)
         {
             if (globals::curScreen == 3) {
                 globals::g_player->lvl -= 1;
-                loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                std::wstring str = L"level";
+                str += std::to_wstring(globals::g_player->lvl);
+                str += L".txt";
+                loadLevel(str.c_str());
                 RECT temp = { 0, 0, SWIDTH, SHEIGHT };
                 InvalidateRect(wnd, &temp, true);
             }
@@ -447,7 +504,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         if(globals::curScreen == 3)
             if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top+32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
-                if (globals::g_modKeys.at(VK_SHIFT) || globals::g_mouseDown) globals::g_player->mousebox = true;
+                if ((globals::g_modKeys.at(VK_SHIFT) || globals::g_mouseDown) && !globals::g_player->mousebox) { globals::g_player->mousebox = true; playAlias(L"good"); }
         break;
     case WM_LBUTTONDOWN:
         globals::g_mouseDown = true;
@@ -503,8 +560,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         case 3:
             if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top + 32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
+            {
+                if(!globals::g_player->mousebox) playAlias(L"good");
                 globals::g_player->mousebox = true;
-            else mousebox->image = mouseSpriteB;
+            }
+            else
+            {
+                if (!globals::g_player->mousebox) playAlias(L"bad");
+                mousebox->image = mouseSpriteB;
+            }
             for (unsigned short i = 0; i < globals::g_ScreenObjects.size(); i++)
             {
                 if (globals::g_ScreenObjects.at(i)->active && globals::g_ScreenObjects.at(i)->Touching(globals::g_mouseX, globals::g_mouseY))
@@ -528,8 +592,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             globals::g_modKeys.at(VK_SHIFT) = true;
             if (globals::curScreen == 3)
                 if (globals::g_mousebox->rect.left + 32 > 34 && globals::g_mousebox->rect.left + 32 < 734 && globals::g_mousebox->rect.top + 32 > 35 && !globals::g_player->collideMouseX(float(mousebox->rect.left), float(mousebox->rect.top), false) && !globals::g_player->collideMouseY(float(mousebox->rect.left), float(mousebox->rect.top), false))
+                {
+                    if (!globals::g_player->mousebox) playAlias(L"good");
                     globals::g_player->mousebox = true;
-                else mousebox->image = mouseSpriteB;
+                }
+                else
+                {
+                    if (!globals::g_player->mousebox) playAlias(L"bad");
+                    mousebox->image = mouseSpriteB;
+                }
             break;
         case VK_CONTROL:
             globals::g_modKeys.at(VK_CONTROL) = true;
@@ -634,7 +705,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     {
                         if (globals::g_level->endS == 2 && globals::g_player->Cy == globals::g_level->endCY)
                         {
-                            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                            std::wstring str = L"level";
+                            str += std::to_wstring(globals::g_player->lvl);
+                            str += L".txt";
+                            loadLevel(str.c_str());
                         }
                         else
                         {
@@ -656,7 +730,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     {
                         if (globals::g_level->endS == 0 && globals::g_player->Cy == globals::g_level->endCY)
                         {
-                            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                            std::wstring str = L"level";
+                            str += std::to_wstring(globals::g_player->lvl);
+                            str += L".txt";
+                            loadLevel(str.c_str());
                         }
                         else
                         {
@@ -678,7 +755,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     {
                         if (globals::g_level->endS == 3 && globals::g_player->Cx == globals::g_level->endCX)
                         {
-                            loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                            std::wstring str = L"level";
+                            str += std::to_wstring(globals::g_player->lvl);
+                            str += L".txt";
+                            loadLevel(str.c_str());
                         }
                         else
                         {
@@ -700,7 +780,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     {
                         if (globals::g_level->endS == 0 && globals::g_player->Cx == globals::g_level->endCX)
                         {
-                            globals::g_level->loadLevel("level" + std::to_string(globals::g_player->lvl) + ".txt");
+                            std::wstring str = L"level";
+                            str += std::to_wstring(globals::g_player->lvl);
+                            str += L".txt";
+                            loadLevel(str.c_str());
                         }
                         else
                         {
