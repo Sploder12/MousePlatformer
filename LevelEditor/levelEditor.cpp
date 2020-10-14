@@ -339,6 +339,7 @@ void saveAs()
 unsigned char tlw, tlh;
 unsigned char tscx, tscy, tsx, tsy;
 unsigned char tex, tey, tes;
+bool tswr;
 void newF(unsigned char lw, unsigned char lh, bool del = true)
 {
     globals::fileName = L"![untitledLevel]!";
@@ -355,6 +356,7 @@ void newF(unsigned char lw, unsigned char lh, bool del = true)
     globals::g_level->endCX = tex;
     globals::g_level->endCY = tey;
     globals::g_level->endS = tes;
+    globals::g_level->startRune = tswr;
     globals::curStageX = 0;
     globals::curStageY = 0;
     unoptimizeCur();
@@ -818,6 +820,9 @@ void pressed(WPARAM key)
     case 0x42:
         backgroundToggle();
         break;
+    case 0x53:
+        if (globals::g_modKeys.at(VK_CONTROL)) save();
+        break;
     case 0x57:
         globals::loop = !globals::loop;
         break;
@@ -1074,6 +1079,9 @@ BOOL CALLBACK newProc(HWND hwndDlg,
             break;
         case IDC_RADIOLEFT:
             tes = 3;
+            break;
+        case IDC_CHECK1SWR:
+            tswr = !tswr;
             break;
         case IDOK:
             

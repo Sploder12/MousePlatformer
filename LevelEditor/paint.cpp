@@ -76,16 +76,16 @@ void pnt(HWND hWnd, RECT* region)
 		{
 			switch (globals::g_level->endS)
 			{
-			case 0:
+			case 1:
 				FillRect(buffer, &createRECT(0, 0, 768, 3), red);
 				break;
-			case 1:
+			case 2:
 				FillRect(buffer, &createRECT(765, 0, 768, 576), red);
 				break;
-			case 2:
+			case 3:
 				FillRect(buffer, &createRECT(0, 573, 768, 576), red);
 				break;
-			case 3:
+			case 0:
 				FillRect(buffer, &createRECT(0, 0, 3, 576), red);
 				break;
 			}

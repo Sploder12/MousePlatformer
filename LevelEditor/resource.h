@@ -24,8 +24,9 @@
 #define IDC_ENDY                        1009
 #define IDC_STARTY                      1011
 #define IDC_STARTX                      1012
+#define IDC_CHECK1                      1013
+#define IDC_CHECK1SWR                   1013
 #define IDC_STARTCY                     1015
-#define IDC_STARTX2                     1016
 #define IDC_STARTCX                     1016
 #define ID_FILE_NEW                     32771
 #define ID_FILE_SAVE                    32772
@@ -46,7 +47,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        134
 #define _APS_NEXT_COMMAND_VALUE         32781
-#define _APS_NEXT_CONTROL_VALUE         1012
+#define _APS_NEXT_CONTROL_VALUE         1014
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

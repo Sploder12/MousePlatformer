@@ -1,6 +1,6 @@
 #include "Globals.h"
 
-bool globals::g_debug = true;
+bool globals::g_debug = false;
 
 unsigned int globals::curScreen = 0; //0 is mainmenu, 1 is options, 2 is paused, 3 is level
 unsigned int globals::prevScreen = 0;
